@@ -568,27 +568,28 @@ function scheduleAudio(){
 let strobeOn = false;
 const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 
-// "luz general" (masterBright) is signed:
-//   +1 … 0  → clay-grey bodies, light fades to black at 0
-//    0 …-1  → bodies switch to a dark, semi-transparent skin; light rises again,
-//             now only glinting colour off the near-black material.
-// light intensity always uses the magnitude; the sign only flips the body look.
-const lightScale = () => Math.abs(masterBright);
+// "luz general" (masterBright) is signed — it INVERTS where the light lands:
+//   +1 … 0  → light paints the bodies (clay-grey), background stays black.
+//    0 …-1  → bodies go flat black (silhouettes); the light/colour moves to the
+//             environment, so the silhouettes read against a glowing backdrop.
+// magnitude = how much light; sign = bodies-lit (+) vs background-lit (−).
+const _bg = new THREE.Color();
+function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); }
+function setBgGlow(v){ v = Math.min(1, Math.max(0, v)); _bg.setHex(strobeColor).multiplyScalar(v); scene.background.copy(_bg); scene.fog.color.copy(_bg); }
 function applyBodyLook(){
   if (!bodyMat) return;
-  const dark = masterBright < 0;
-  bodyMat.color.setHex(dark ? 0x0c0c0e : 0xc9c9cd);
-  bodyMat.roughness = dark ? 0.32 : 0.78;
-  bodyMat.metalness = dark ? 0.25 : 0.0;
-  bodyMat.transparent = dark;
-  bodyMat.opacity = dark ? 0.6 : 1.0;
+  const dark = masterBright < 0;                 // negative → black silhouettes
+  bodyMat.color.setHex(dark ? 0x000000 : 0xc9c9cd);
+  bodyMat.roughness = dark ? 1.0 : 0.78;
+  bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
 }
 
-// static (non-flashing) light levels, scaled by the master dimmer (magnitude)
+// static (non-flashing) light levels. In negative mode bodies get no light (silhouettes).
 function refreshStatic(){
-  hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * lightScale();
-  if (!strobeOn) key.intensity = KEY_DISCO * lightScale();
+  const neg = masterBright < 0, amt = Math.abs(masterBright);
+  hemi.intensity = neg ? 0.0 : (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;
+  if (!strobeOn) key.intensity = neg ? 0.0 : KEY_DISCO * amt;
 }
 function setStrobe(on){
   strobeOn = on;
@@ -622,6 +623,7 @@ function tick(now){
     }
   }
 
+  const neg = masterBright < 0, amt = Math.abs(masterBright);
   if (strobeOn){
     // brief flash, ~16% duty cycle, at its own rate (Hz), scaled by the dimmer.
     // each flash gets a slightly different amplitude so it's not mechanically identical.
@@ -629,15 +631,19 @@ function tick(now){
     const ph = strobeClock % 1;
     const fid = Math.floor(strobeClock);
     if (fid !== flashId){ flashId = fid; flashAmp = rf(0.55, 1.0); }
-    key.intensity = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * lightScale();
+    const flash = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * amt;
+    if (neg){ key.intensity = 0; setBgGlow(flash * 0.3); }   // el fondo destella, cuerpos negros
+    else    { key.intensity = flash; setBg(0x000000); }      // los cuerpos destellan
   } else {
     // disco lights: slow orbit + beat pulse
     const orbit = (now / 1000) * 0.25;
     discoLights.forEach(l => {
       const a = l.userData.phase + orbit;
       l.position.set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
-      l.intensity = l.userData.base * (0.6 + 0.55 * beatPulse) * lightScale();
+      l.intensity = neg ? 0 : l.userData.base * (0.6 + 0.55 * beatPulse) * amt;
     });
+    if (neg) setBgGlow((0.30 + 0.5 * beatPulse) * amt);      // ambiente teñido que late
+    else     setBg(0x050507);
   }
 
   // ---- cámara según modo ----

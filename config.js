@@ -7,7 +7,7 @@
 window.CONFIG = {
   cuerpos:           13,         // nº de cuerpos (1–30)
   bpm:               112,        // pulso de luces/audio (70–140)
-  luzGeneral:        98,         // brillo general 0–100
+  luzGeneral:        98,         // -100..100 (bajo cero: cuerpos negros translúcidos teñidos por la luz)
   colorLuz:          "#ffffff",  // color del estrobo / luz
   rotacionAzar:      100,        // hacia dónde miran: 0 = igual, 100 = al azar
   cercania:          14,         // 0 = masa apretada, 100 = dispersos

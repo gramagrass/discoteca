@@ -608,18 +608,18 @@ const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); }
 function applyBodyLook(){
   if (!bodyMat) return;
-  const dark = masterBright < 0;                 // negative → dark grey, lit enough to read form
-  bodyMat.color.setHex(dark ? 0x4a4a54 : 0xc9c9cd);
-  bodyMat.roughness = dark ? 0.72 : 0.92;        // matte (diffuse), not glossy speckle
+  const dark = masterBright < 0;                 // negative → same material, just a dark tone
+  bodyMat.color.setHex(dark ? 0x303036 : 0xc9c9cd);
+  bodyMat.roughness = 0.92;
   bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
 }
 
 // static (non-flashing) light levels. In negative mode bodies get no light (silhouettes).
 function refreshStatic(){
-  const neg = masterBright < 0, amt = Math.abs(masterBright);
-  hemi.intensity = neg ? 0.0 : (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;
-  if (!strobeOn) key.intensity = neg ? 0.0 : KEY_DISCO * amt;
+  const amt = Math.abs(masterBright);   // bodies are lit the same way for + and − (only the tone/bg differ)
+  hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;
+  if (!strobeOn) key.intensity = KEY_DISCO * amt;
 }
 function setStrobe(on){
   strobeOn = on;
@@ -655,42 +655,33 @@ function tick(now){
   const neg = masterBright < 0, amt = Math.abs(masterBright);
   dome.visible = neg;
 
-  // disco lights always orbit; their intensity depends on the mode (set below)
+  // disco lights always orbit
   const orbit = (now / 1000) * 0.25;
   discoLights.forEach(l => {
     const a = l.userData.phase + orbit;
     l.position.set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
   });
-  // in negative mode the SAME colour lights still touch the bodies faintly, so the dark
-  // forms keep some volume/sheen instead of reading as flat cut-outs.
-  const NEG_BODY = amt * 4.5;
 
+  // BODIES are lit identically whether luz general is + or − (same key/hemi/disco).
+  // The only difference in − is: dark material (handled) + a colour-lit background (dome).
+  let domeInten;
   if (strobeOn){
-    // brief flash, ~16% duty cycle, at its own rate (Hz), scaled by the dimmer.
-    // each flash gets a slightly different amplitude so it's not mechanically identical.
     strobeClock += dt * strobeHz;
     const ph = strobeClock % 1;
     const fid = Math.floor(strobeClock);
     if (fid !== flashId){ flashId = fid; flashAmp = rf(0.55, 1.0); }
     const flash = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * amt;
-    if (neg){
-      key.intensity = 0;
-      discoLights.forEach(l => l.intensity = NEG_BODY);   // volumen tenue
-      setBg(0x000000); paintDome(now, flash);             // el fondo destella en manchas
-    } else {
-      key.intensity = flash;                               // los cuerpos destellan
-      discoLights.forEach(l => l.intensity = 0);           // sin luces de color durante estrobo+
-      setBg(0x000000);
-    }
+    key.intensity = flash;
+    discoLights.forEach(l => l.intensity = 0);            // sin luces de color durante estrobo
+    domeInten = flash;                                    // el fondo destella con los cuerpos
   } else {
-    if (neg){
-      discoLights.forEach(l => l.intensity = NEG_BODY);
-      setBg(0x000000); paintDome(now, (0.45 + 0.6 * beatPulse) * amt);  // manchas que laten
-    } else {
-      discoLights.forEach(l => l.intensity = l.userData.base * (0.6 + 0.55 * beatPulse) * amt);
-      setBg(0x050507);
-    }
+    discoLights.forEach(l => l.intensity = l.userData.base * (0.6 + 0.55 * beatPulse) * amt);
+    domeInten = (0.45 + 0.6 * beatPulse) * amt;
   }
+
+  // background: black in +, colour-painted dome in −
+  if (neg){ setBg(0x000000); paintDome(now, domeInten); }
+  else      setBg(strobeOn ? 0x000000 : 0x050507);
 
   // ---- cámara según modo ----
   // cs: curva cuadrática → el extremo bajo del slider es MUY lento y sutil

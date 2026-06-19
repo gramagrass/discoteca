@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-<title>cuerpos</title>
+<title>DISCO.GRAMA.CO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -23,8 +23,8 @@
   }
   .panel{ pointer-events:auto; position:absolute; }
   #title{
-    font-size:13px; letter-spacing:0.32em; text-transform:uppercase; color:var(--ink);
-    padding-bottom:2px;
+    font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink);
+    padding-bottom:2px; white-space:nowrap;
   }
   .sec{
     font-size:9px; letter-spacing:0.22em; text-transform:uppercase; color:var(--accent);
@@ -100,7 +100,7 @@
 
 <div id="ui">
   <div id="dock" class="panel">
-    <div id="title">cuerpos</div>
+    <div id="title">DISCO.GRAMA.CO</div>
     <button id="reroll" class="primary">tirar dados ↻</button>
 
     <div class="sec">cuerpos</div>
@@ -524,6 +524,8 @@ function randomizeAll(){
   camMode     = ri(CAMMODES);
   cam.baseAz  = Math.random() * TAU; cam.el = rf(0.1, 1.0); cam.rad = rf(5, 14);
   cam.fly = null; cam.tvEnd = 0;
+  masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.5, 1.0);  // + normal o − invertido (nunca casi-negro)
+  applyBodyLook(); refreshStatic();
   placeCrowd(COUNT);                                   // reconstruye + aplica formación + reparte bailes
   syncUI();
 }
@@ -610,17 +612,21 @@ function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); 
 function applyBodyLook(){
   if (!bodyMat) return;
   const dark = masterBright < 0;                 // negative → same material, just a dark tone
-  bodyMat.color.setHex(dark ? 0x303036 : 0xc9c9cd);
+  bodyMat.color.setHex(dark ? 0x383840 : 0xc9c9cd);
   bodyMat.roughness = 0.92;
   bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
 }
 
 // static (non-flashing) light levels. In negative mode bodies get no light (silhouettes).
+// dark bodies reflect less, so in negative the directional (modelling) light is boosted
+// to recover the chiaroscuro; ambient stays low so shadows keep their depth.
+const KEY_BOOST = 3.5;
 function refreshStatic(){
-  const amt = Math.abs(masterBright);   // bodies are lit the same way for + and − (only the tone/bg differ)
+  const amt = Math.abs(masterBright);
+  const kb = masterBright < 0 ? KEY_BOOST : 1.0;
   hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;
-  if (!strobeOn) key.intensity = KEY_DISCO * amt;
+  if (!strobeOn) key.intensity = KEY_DISCO * amt * kb;
 }
 function setStrobe(on){
   strobeOn = on;
@@ -672,7 +678,7 @@ function tick(now){
     const fid = Math.floor(strobeClock);
     if (fid !== flashId){ flashId = fid; flashAmp = rf(0.55, 1.0); }
     const flash = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * amt;
-    key.intensity = flash;
+    key.intensity = flash * (neg ? KEY_BOOST : 1);        // los cuerpos oscuros también destellan con cuerpo
     discoLights.forEach(l => l.intensity = 0);            // sin luces de color durante estrobo
     domeInten = flash;                                    // el fondo destella con los cuerpos
   } else {

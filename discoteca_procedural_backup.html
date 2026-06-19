@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>cuerpos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #cfd0d6;
+    --ink-dim: #6a6b78;
+    --line: rgba(255,255,255,0.10);
+    --accent: #ff2d7a;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:#050507; overflow:hidden; }
+  canvas{ display:block; }
+  #ui{
+    position:fixed; inset:0; pointer-events:none;
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+    color:var(--ink); user-select:none;
+  }
+  .panel{ pointer-events:auto; position:absolute; }
+  /* top-left readout */
+  #meta{
+    top:18px; left:20px; font-size:11px; line-height:1.7; color:var(--ink-dim);
+    letter-spacing:0.04em;
+  }
+  #meta b{ color:var(--ink); font-weight:500; }
+  #meta .rec{ color:var(--accent); }
+  /* bottom controls */
+  #dock{
+    left:20px; bottom:18px; display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap;
+  }
+  .ctl{ display:flex; flex-direction:column; gap:6px; }
+  .ctl label{ font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-dim); }
+  .ctl .val{ color:var(--ink); }
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:128px; height:2px;
+    background:var(--line); outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:11px; height:11px; border-radius:50%;
+    background:var(--ink); cursor:pointer; border:none;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:11px; height:11px; border-radius:50%; background:var(--ink); border:none; cursor:pointer;
+  }
+  button{
+    pointer-events:auto; font-family:inherit; font-size:11px; letter-spacing:0.08em;
+    color:var(--ink); background:transparent; border:1px solid var(--line);
+    padding:8px 14px; cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  button:hover{ border-color:var(--ink); }
+  button.primary{ border-color:var(--accent); color:#fff; }
+  button.primary:hover{ background:rgba(255,45,122,0.12); }
+  #hint{
+    right:20px; bottom:18px; max-width:280px; text-align:right;
+    font-size:10px; line-height:1.7; color:var(--ink-dim); letter-spacing:0.03em;
+  }
+  #hint kbd{
+    font-family:inherit; color:var(--ink); border:1px solid var(--line);
+    padding:0 5px; border-radius:3px; font-size:10px;
+  }
+  .hidden{ opacity:0 !important; pointer-events:none !important; }
+  #ui *{ transition:opacity .3s ease; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <div id="meta" class="panel">
+    <div><b id="m-count">20</b> cuerpos · una sola forma, muchos movimientos</div>
+    <div><b id="m-bpm">112</b> bpm · giro de luces sincronizado al pulso</div>
+    <div class="rec">bucle = <b id="m-loop">8.57</b>s &nbsp;·&nbsp; graba esta duración exacta → loop perfecto</div>
+  </div>
+
+  <div id="dock" class="panel">
+    <button id="reroll" class="primary">tirar dados ↻</button>
+    <div class="ctl">
+      <label>cuerpos <span class="val" id="v-count">20</span></label>
+      <input id="s-count" type="range" min="1" max="40" step="1" value="20">
+    </div>
+    <div class="ctl">
+      <label>bpm <span class="val" id="v-bpm">112</span></label>
+      <input id="s-bpm" type="range" min="70" max="140" step="1" value="112">
+    </div>
+    <button id="sound">sonido: off</button>
+    <button id="grid">piso</button>
+  </div>
+
+  <div id="hint" class="panel">
+    arrastra para orbitar · rueda para acercar<br>
+    <kbd>R</kbd> dados &nbsp; <kbd>S</kbd> sonido &nbsp; <kbd>H</kbd> ocultar panel &nbsp; <kbd>F</kbd> pantalla completa
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+const TAU = Math.PI * 2;
+const LOOP_BEATS = 16;          // the whole field repeats every 16 beats → seamless loop
+let   BPM = 112;
+let   COUNT = 20;
+
+// ---------------------------------------------------------------- renderer / scene
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050507);
+scene.fog = new THREE.FogExp2(0x050507, 0.030);
+
+const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
+
+// ---------------------------------------------------------------- lights
+scene.add(new THREE.HemisphereLight(0x404a66, 0x05060a, 0.22));
+
+const key = new THREE.DirectionalLight(0xbfc6ff, 0.55);
+key.position.set(4, 12, 6);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = -9; key.shadow.camera.right = 9;
+key.shadow.camera.top = 9;   key.shadow.camera.bottom = -9;
+key.shadow.camera.near = 1;  key.shadow.camera.far = 40;
+key.shadow.bias = -0.0006;
+scene.add(key);
+
+// coloured disco lights that orbit once per loop (seamless) and pulse on the beat
+const discoColors = [0xff2d7a, 0x18d6ff, 0xffb43a];
+const discoLights = discoColors.map((c, i) => {
+  const l = new THREE.PointLight(c, 9, 22, 2);
+  l.userData = { base: 9, phase: (i / discoColors.length) * TAU, radius: 6.5 + i * 0.8, h: 4.2 + i * 0.6 };
+  scene.add(l);
+  // glowing orb so you can see the source (cheap, no post-processing)
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 16, 12),
+    new THREE.MeshBasicMaterial({ color: c })
+  );
+  l.add(orb);
+  return l;
+});
+
+// ---------------------------------------------------------------- floor
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(80, 80),
+  new THREE.MeshStandardMaterial({ color: 0x0b0b10, roughness: 0.92, metalness: 0.0 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+const grid = new THREE.GridHelper(60, 60, 0x2a2a3a, 0x16161f);
+grid.material.transparent = true;
+grid.material.opacity = 0.25;
+grid.position.y = 0.002;
+scene.add(grid);
+
+// ---------------------------------------------------------------- shared figure assets
+const MAT = new THREE.MeshStandardMaterial({ color: 0x9a9aa4, roughness: 0.55, metalness: 0.0 });
+const cap = (r, len, rs=10) => new THREE.CapsuleGeometry(r, len, 5, rs);
+const GEO = {
+  pelvis:  cap(0.13, 0.06, 14),
+  torso:   cap(0.135, 0.24, 14),
+  head:    new THREE.SphereGeometry(0.125, 22, 16),
+  upperArm: cap(0.05, 0.18),
+  lowerArm: cap(0.045, 0.18),
+  hand:    new THREE.SphereGeometry(0.05, 12, 10),
+  upperLeg: cap(0.075, 0.26),
+  lowerLeg: cap(0.063, 0.26),
+  foot:    new THREE.BoxGeometry(0.1, 0.05, 0.22),
+};
+const mesh = (g) => { const m = new THREE.Mesh(g, MAT); m.castShadow = true; return m; };
+
+function buildFigure(){
+  const root = new THREE.Group();
+
+  const pelvis = mesh(GEO.pelvis); pelvis.rotation.z = Math.PI/2; root.add(pelvis);
+
+  // torso → chest → neck → head
+  const spine = new THREE.Group(); spine.position.set(0, 0.06, 0); root.add(spine);
+  const chest = new THREE.Group(); chest.position.set(0, 0.0, 0);  spine.add(chest);
+  const chestMesh = mesh(GEO.torso); chestMesh.position.set(0, 0.17, 0); chest.add(chestMesh);
+  const neck = new THREE.Group(); neck.position.set(0, 0.33, 0); chest.add(neck);
+  const head = new THREE.Group(); head.position.set(0, 0.07, 0); neck.add(head);
+  const headMesh = mesh(GEO.head); headMesh.position.set(0, 0.10, 0); head.add(headMesh);
+
+  // arms (children of chest)
+  function arm(side){
+    const sh = new THREE.Group(); sh.position.set(0.17*side, 0.27, 0); chest.add(sh);
+    sh.rotation.z = 0.16 * side;                 // rest: hang slightly outward
+    const ua = mesh(GEO.upperArm); ua.position.set(0, -0.13, 0); sh.add(ua);
+    const el = new THREE.Group(); el.position.set(0, -0.26, 0); sh.add(el);
+    const la = mesh(GEO.lowerArm); la.position.set(0, -0.12, 0); el.add(la);
+    const hand = mesh(GEO.hand); hand.position.set(0, -0.25, 0); el.add(hand);
+    return { sh, el, baseZ: 0.16*side };
+  }
+  const armL = arm(-1), armR = arm(1);
+
+  // legs (children of root)
+  function leg(side){
+    const hip = new THREE.Group(); hip.position.set(0.09*side, -0.04, 0); root.add(hip);
+    const ul = mesh(GEO.upperLeg); ul.position.set(0, -0.18, 0); hip.add(ul);
+    const kn = new THREE.Group(); kn.position.set(0, -0.36, 0); hip.add(kn);
+    const ll = mesh(GEO.lowerLeg); ll.position.set(0, -0.18, 0); kn.add(ll);
+    const foot = mesh(GEO.foot); foot.position.set(0, -0.39, 0.06); kn.add(foot);
+    return { hip, kn };
+  }
+  const legL = leg(-1), legR = leg(1);
+
+  return { root, spine, chest, neck, head, armL, armR, legL, legR };
+}
+
+// ---------------------------------------------------------------- dance genome
+const STAND_Y = 0.92;
+const ri = (a) => a[(Math.random()*a.length)|0];
+const rf = (a,b) => a + Math.random()*(b-a);
+
+function makeGenome(){
+  const alt = Math.random() < 0.55;             // arms alternate vs mirror
+  return {
+    e:          rf(0.6, 1.25),                  // overall energy
+    bobAmp:     rf(0.05, 0.11),
+    swayCyc:    ri([1,2]),  swayPhase: Math.random()*TAU, swayAmp: rf(0.5,1.0),
+    twistCyc:   ri([1,2]),  twistPhase: Math.random()*TAU, twistAmp: rf(0.0,0.45),
+    armFreq:    ri([2,4,8]),
+    armAmpX:    rf(0.3, 1.05),                  // swing front/back
+    armAmpZ:    rf(0.1, 1.15),                  // raise out/up
+    armPhL:     Math.random()*TAU,
+    armPhR:     null,                            // filled below
+    elFreq:     ri([4,8,16]),
+    elAmp:      rf(0.25, 0.95),
+    elPhL:      Math.random()*TAU, elPhR: Math.random()*TAU,
+    headAmp:    rf(0.06, 0.30), headPhase: Math.random()*TAU,
+    facing:     Math.random()*TAU, faceSway: rf(0, 0.35),
+    kneeStyle:  rf(0.45, 0.85),
+    alt,
+  };
+}
+function fillGenome(g){ g.armPhR = g.alt ? g.armPhL + Math.PI : Math.random()*TAU; return g; }
+
+// ---------------------------------------------------------------- the crowd
+let crowd = [];
+function placeCrowd(n){
+  crowd.forEach(f => scene.remove(f.fig.root));
+  crowd = [];
+  const cols = Math.ceil(Math.sqrt(n * 1.4));
+  const spacing = 1.5;
+  let idx = 0;
+  for (let i = 0; i < n; i++){
+    const fig = buildFigure();
+    const c = idx % cols, r = (idx / cols) | 0;
+    const rows = Math.ceil(n / cols);
+    const x = (c - (cols-1)/2) * spacing + rf(-0.3, 0.3);
+    const z = (r - (rows-1)/2) * spacing + rf(-0.3, 0.3);
+    fig.root.position.set(x, STAND_Y, z);
+    const g = fillGenome(makeGenome());
+    fig.baseX = x; fig.baseZ = z;
+    scene.add(fig.root);
+    crowd.push({ fig, g });
+    idx++;
+  }
+}
+function reroll(){ crowd.forEach(c => c.g = fillGenome(makeGenome())); }
+
+placeCrowd(COUNT);
+
+// ---------------------------------------------------------------- animation
+function animateFigure(c, p, beatOsc, kneeBend){
+  const { fig, g } = c;
+  const e = g.e;
+
+  const sway  = Math.sin(p*TAU*g.swayCyc + g.swayPhase) * g.swayAmp;
+  const twist = Math.sin(p*TAU*g.twistCyc + g.twistPhase) * g.twistAmp;
+  const headN = Math.sin(beatOsc + g.headPhase) * g.headAmp;
+
+  // root: sink on the beat, weight-shift, slow facing sway
+  fig.root.position.x = fig.baseX + sway * 0.04 * e;
+  fig.root.position.y = STAND_Y - kneeBend * g.bobAmp * e;
+  fig.root.rotation.y = g.facing + Math.sin(p*TAU) * g.faceSway;
+  fig.root.rotation.z = sway * 0.04 * e;
+
+  // torso groove
+  fig.spine.rotation.z = sway * 0.13 * e;
+  fig.spine.rotation.x = (kneeBend - 0.5) * 0.10 * e;        // tiny bob lean
+  fig.chest.rotation.y = twist * e;
+
+  // head
+  fig.head.rotation.x = headN;
+  fig.head.rotation.y = sway * 0.18;
+  fig.head.rotation.z = -sway * 0.10 * e;
+
+  // arms
+  const armSwing = (ph) => Math.sin(p*TAU*g.armFreq + ph);
+  const armRaise = (ph) => (0.5 + 0.5*Math.sin(p*TAU*g.armFreq + ph));
+  const elbow    = (ph) => -(0.25 + armRaise(ph) * g.elAmp);
+
+  fig.armL.sh.rotation.x = armSwing(g.armPhL) * g.armAmpX * e;
+  fig.armL.sh.rotation.z = fig.armL.baseZ - armRaise(g.armPhL) * g.armAmpZ * e;
+  fig.armL.el.rotation.x = elbow(g.elPhL);
+
+  fig.armR.sh.rotation.x = armSwing(g.armPhR) * g.armAmpX * e;
+  fig.armR.sh.rotation.z = fig.armR.baseZ + armRaise(g.armPhR) * g.armAmpZ * e;
+  fig.armR.el.rotation.x = elbow(g.elPhR);
+
+  // legs: shared bounce + a little extra bend on the weighted side
+  const extraL = Math.max(0,  sway) * 0.25;
+  const extraR = Math.max(0, -sway) * 0.25;
+  fig.legL.hip.rotation.x = -kneeBend * 0.30 * g.kneeStyle - extraL*0.2;
+  fig.legL.kn.rotation.x =  kneeBend * 0.55 * g.kneeStyle + extraL;
+  fig.legR.hip.rotation.x = -kneeBend * 0.30 * g.kneeStyle - extraR*0.2;
+  fig.legR.kn.rotation.x =  kneeBend * 0.55 * g.kneeStyle + extraR;
+}
+
+// ---------------------------------------------------------------- camera control (drag + wheel + seamless sway)
+const cam = { az: 0.5, el: 0.30, rad: 9.5, baseAz: 0.5 };
+let dragging = false, lastX = 0, lastY = 0;
+renderer.domElement.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+addEventListener('pointerup', () => dragging = false);
+addEventListener('pointermove', e => {
+  if (!dragging) return;
+  cam.baseAz -= (e.clientX - lastX) * 0.005;
+  cam.el     = Math.max(0.05, Math.min(1.2, cam.el - (e.clientY - lastY) * 0.005));
+  lastX = e.clientX; lastY = e.clientY;
+});
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.rad = Math.max(4, Math.min(22, cam.rad + e.deltaY * 0.01));
+}, { passive:false });
+
+// ---------------------------------------------------------------- audio (synthesised kick + hat, on the same bpm — original, no copyright)
+let audio = null, soundOn = false, nextNote = 0, step = 0;
+function startAudio(){
+  audio = new (window.AudioContext || window.webkitAudioContext)();
+  nextNote = audio.currentTime + 0.05; step = 0;
+}
+function kick(t){
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(48, t+0.12);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6, t+0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+0.22);
+  o.connect(g).connect(audio.destination); o.start(t); o.stop(t+0.24);
+}
+function hat(t){
+  const b = audio.createBuffer(1, 1024, audio.sampleRate), d = b.getChannelData(0);
+  for (let i=0;i<1024;i++) d[i] = Math.random()*2-1;
+  const s = audio.createBufferSource(); s.buffer = b;
+  const hp = audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000;
+  const g = audio.createGain();
+  g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t+0.05);
+  s.connect(hp).connect(g).connect(audio.destination); s.start(t); s.stop(t+0.06);
+}
+function scheduleAudio(){
+  if (!soundOn || !audio) return;
+  const spb = 60 / BPM;                          // seconds per beat
+  while (nextNote < audio.currentTime + 0.1){
+    if (step % 2 === 0) kick(nextNote);
+    hat(nextNote);
+    nextNote += spb / 2;                          // eighth-note grid
+    step++;
+  }
+}
+
+// ---------------------------------------------------------------- main loop
+let phaseBeats = 0, prev = performance.now();
+const m_loop = document.getElementById('m-loop');
+
+function tick(now){
+  const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
+  phaseBeats = (phaseBeats + dt * (BPM / 60)) % LOOP_BEATS;
+  const p = phaseBeats / LOOP_BEATS;
+
+  const beatOsc = p * TAU * LOOP_BEATS;
+  const kneeBend = Math.pow(0.5 - 0.5 * Math.cos(beatOsc), 1.25);   // shared collective pulse
+
+  for (const c of crowd) animateFigure(c, p, beatOsc, kneeBend);
+
+  // disco lights: one orbit per loop (seamless) + beat pulse
+  discoLights.forEach(l => {
+    const a = l.userData.phase + p * TAU;
+    l.position.set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
+    l.intensity = l.userData.base * (0.65 + 0.5 * kneeBend);
+  });
+
+  // camera: user angle + subtle seamless sway (one cycle per loop)
+  cam.az = cam.baseAz + Math.sin(p * TAU) * 0.18;
+  const cx = Math.cos(cam.az) * Math.cos(cam.el) * cam.rad;
+  const cz = Math.sin(cam.az) * Math.cos(cam.el) * cam.rad;
+  const cy = 1.2 + Math.sin(cam.el) * cam.rad;
+  camera.position.set(cx, cy, cz);
+  camera.lookAt(0, 1.0, 0);
+
+  scheduleAudio();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ---------------------------------------------------------------- UI wiring
+const $ = id => document.getElementById(id);
+function updateLoopReadout(){
+  const sec = (LOOP_BEATS * 60 / BPM).toFixed(2);
+  m_loop.textContent = sec;
+  $('m-bpm').textContent = BPM;
+  $('m-count').textContent = COUNT;
+}
+updateLoopReadout();
+
+$('reroll').onclick = reroll;
+$('s-bpm').oninput = e => { BPM = +e.target.value; $('v-bpm').textContent = BPM; updateLoopReadout(); };
+$('s-count').oninput = e => { COUNT = +e.target.value; $('v-count').textContent = COUNT; placeCrowd(COUNT); updateLoopReadout(); };
+$('grid').onclick = () => { grid.visible = !grid.visible; floor.visible = grid.visible || floor.visible; };
+$('sound').onclick = () => {
+  if (!audio) startAudio();
+  if (audio.state === 'suspended') audio.resume();
+  soundOn = !soundOn;
+  if (soundOn){ nextNote = audio.currentTime + 0.05; step = 0; }
+  $('sound').textContent = 'sonido: ' + (soundOn ? 'on' : 'off');
+};
+
+const ui = document.getElementById('ui');
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'r') reroll();
+  else if (k === 's') $('sound').click();
+  else if (k === 'h') ui.classList.toggle('hidden');
+  else if (k === 'f'){
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

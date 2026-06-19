@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>cuerpos · configuración</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#cfd0d6; --ink-dim:#6a6b78; --line:rgba(255,255,255,0.10); --accent:#ff2d7a;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:#050507; color:var(--ink); min-height:100vh;
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+    display:flex; justify-content:center; padding:40px 18px 80px;
+  }
+  .wrap{ width:100%; max-width:760px; display:grid; grid-template-columns:1fr; gap:28px; }
+  @media(min-width:840px){ .wrap{ grid-template-columns:1fr 320px; align-items:start; } }
+  h1{ font-size:15px; letter-spacing:0.3em; text-transform:uppercase; font-weight:500; margin:0 0 4px; }
+  .sub{ font-size:11px; color:var(--ink-dim); letter-spacing:0.04em; margin-bottom:8px; }
+  .sec{
+    font-size:9.5px; letter-spacing:0.22em; text-transform:uppercase; color:var(--accent);
+    margin:22px 0 12px; padding-top:13px; border-top:1px solid var(--line);
+  }
+  .row{ display:grid; grid-template-columns:130px 1fr 56px; align-items:center; gap:12px; margin:11px 0; }
+  .row label{ font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-dim); }
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:2px; background:var(--line);
+    outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--ink); border:none; cursor:pointer;
+  }
+  input[type=range]::-moz-range-thumb{ width:12px; height:12px; border-radius:50%; background:var(--ink); border:none; cursor:pointer; }
+  input[type=number]{
+    width:100%; background:transparent; border:1px solid var(--line); color:var(--ink);
+    font-family:inherit; font-size:12px; padding:4px 6px; text-align:right;
+  }
+  input[type=number]:focus{ border-color:var(--ink); outline:none; }
+  input[type=color]{
+    -webkit-appearance:none; appearance:none; width:100%; height:26px; background:transparent;
+    border:1px solid var(--line); padding:0; cursor:pointer; grid-column:2 / 4;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper{ padding:3px; }
+  input[type=color]::-webkit-color-swatch{ border:none; border-radius:2px; }
+  .toggle{ display:flex; gap:18px; flex-wrap:wrap; }
+  .toggle label{
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+    font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink);
+  }
+  .toggle input{ accent-color:var(--accent); width:15px; height:15px; }
+  /* output column */
+  .side{ position:sticky; top:40px; display:flex; flex-direction:column; gap:12px; }
+  pre{
+    background:rgba(255,255,255,0.03); border:1px solid var(--line); border-radius:4px;
+    padding:14px; font-size:11px; line-height:1.55; color:var(--ink); overflow:auto;
+    max-height:54vh; margin:0; white-space:pre;
+  }
+  .btns{ display:flex; gap:10px; flex-wrap:wrap; }
+  button, a.btn{
+    font-family:inherit; font-size:11px; letter-spacing:0.08em; color:var(--ink);
+    background:transparent; border:1px solid var(--line); padding:9px 14px; cursor:pointer;
+    text-decoration:none; transition:border-color .15s, background .15s; border-radius:3px;
+  }
+  button:hover, a.btn:hover{ border-color:var(--ink); }
+  button.primary{ border-color:var(--accent); color:#fff; }
+  button.primary:hover{ background:rgba(255,45,122,0.12); }
+  .note{ font-size:10px; color:var(--ink-dim); line-height:1.6; letter-spacing:0.02em; }
+  .note b{ color:var(--ink); font-weight:500; }
+  .ok{ color:var(--accent); }
+</style>
+</head>
+<body>
+<!-- lee la configuración actual para precargar el formulario -->
+<script src="config.js"></script>
+
+<div class="wrap">
+  <div>
+    <h1>cuerpos · configuración</h1>
+    <div class="sub">edita el estado inicial · descarga el archivo · recarga la obra</div>
+    <div id="form"></div>
+  </div>
+
+  <div class="side">
+    <pre id="out">// …</pre>
+    <div class="btns">
+      <button id="download" class="primary">descargar config.js</button>
+      <button id="copy">copiar</button>
+      <a class="btn" href="index.html" target="_blank" rel="noopener">abrir obra ↗</a>
+    </div>
+    <div id="msg" class="note"></div>
+    <div class="note">
+      Tras descargar, mové <b>config.js</b> a la misma carpeta que <b>discoteca.html</b>
+      (reemplazando el anterior) y recargá la obra. Los ángulos de cámara los podés leer en vivo
+      en el panel de la obra.
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULTS = {
+  cuerpos:13, coreografia:100,
+  rotacionAzar:100, cercania:14, tamanoAzar:0,
+  camAngulo:293, camAltura:2, camZoom:3.8,
+  luzGeneral:98, colorLuz:'#ffffff', bpm:112,
+  estroboVel:7.5, estroboIntensidad:1.6, luzBase:33,
+  estrobo:true, sonido:false, piso:false,
+};
+const cur = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
+
+// field definitions — order, ranges, comments mirror the obra's controls
+const SECTIONS = [
+  ['cuerpos', [
+    ['cuerpos','cuerpos',1,30,1,'nº de cuerpos (1–30)'],
+    ['coreografia','coreografía',0,100,1,'0 = todos el mismo baile · 100 = cada quien el suyo'],
+  ]],
+  ['espacio', [
+    ['rotacionAzar','rotación azar',0,100,1,'0 = miran igual · 100 = al azar'],
+    ['cercania','cercanía',0,100,1,'0 = masa apretada · 100 = dispersos'],
+    ['tamanoAzar','tamaño azar',0,100,1,'0 = igual tamaño · 100 = de mano a gigante'],
+  ]],
+  ['cámara', [
+    ['camAngulo','ángulo',0,359,1,'ángulo horizontal en grados'],
+    ['camAltura','altura',0,80,1,'altura de cámara en grados'],
+    ['camZoom','zoom',3.5,24,0.1,'distancia (menor = más cerca)'],
+  ]],
+  ['luz / estrobo', [
+    ['luzGeneral','luz general',0,100,1,'brillo general 0–100'],
+    ['colorLuz','color luz','color',0,0,'color del estrobo / luz'],
+    ['bpm','bpm',70,140,1,'pulso de luces/audio'],
+    ['estroboVel','estrobo vel',0.5,20,0.1,'destellos por segundo'],
+    ['estroboIntensidad','estrobo intensidad',0,12,0.1,'fuerza del destello (0 = negro)'],
+    ['luzBase','luz base',0,100,1,'luz entre destellos (0 = negro)'],
+  ]],
+  ['modo', [
+    ['estrobo','estrobo','bool',0,0,'arrancar en modo estrobo'],
+    ['sonido','sonido','bool',0,0,'arrancar con sonido (suena al primer clic)'],
+    ['piso','piso','bool',0,0,'mostrar piso/rejilla'],
+  ]],
+];
+
+const COMMENTS = {};
+const ORDER = [];
+SECTIONS.forEach(([,fields]) => fields.forEach(f => { COMMENTS[f[0]] = f[5]; ORDER.push(f[0]); }));
+
+const state = Object.assign({}, cur);
+const form = document.getElementById('form');
+
+function isFloat(step){ return step && step < 1; }
+
+SECTIONS.forEach(([title, fields]) => {
+  const h = document.createElement('div'); h.className='sec'; h.textContent=title; form.appendChild(h);
+  if (title === 'modo'){
+    const wrap = document.createElement('div'); wrap.className='toggle';
+    fields.forEach(([key,label]) => {
+      const lab = document.createElement('label');
+      const cb = document.createElement('input'); cb.type='checkbox'; cb.checked=!!state[key];
+      cb.oninput = () => { state[key]=cb.checked; render(); };
+      lab.appendChild(cb); lab.appendChild(document.createTextNode(label));
+      wrap.appendChild(lab);
+    });
+    form.appendChild(wrap);
+    return;
+  }
+  fields.forEach(([key,label,min,max,step]) => {
+    const row = document.createElement('div'); row.className='row';
+    const lab = document.createElement('label'); lab.textContent=label; row.appendChild(lab);
+    if (min === 'color'){
+      const ci = document.createElement('input'); ci.type='color'; ci.value=state[key];
+      ci.oninput = () => { state[key]=ci.value; render(); };
+      row.appendChild(ci);
+    } else {
+      const rg = document.createElement('input'); rg.type='range'; rg.min=min; rg.max=max; rg.step=step; rg.value=state[key];
+      const nm = document.createElement('input'); nm.type='number'; nm.min=min; nm.max=max; nm.step=step; nm.value=state[key];
+      const clamp = v => Math.min(max, Math.max(min, v));
+      rg.oninput = () => { const v=isFloat(step)?parseFloat(rg.value):parseInt(rg.value,10); state[key]=v; nm.value=v; render(); };
+      nm.oninput = () => { let v=isFloat(step)?parseFloat(nm.value):parseInt(nm.value,10); if(isNaN(v)) return; v=clamp(v); state[key]=v; rg.value=v; render(); };
+      row.appendChild(rg); row.appendChild(nm);
+    }
+    form.appendChild(row);
+  });
+});
+
+function fmt(key){
+  const v = state[key];
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (typeof v === 'string') return '"' + v + '"';
+  return String(v);
+}
+
+function buildText(){
+  let s  = '/* ───────────────────────────────────────────────────────────────\n';
+      s += '   discoteca — estado inicial  (generado por config.html)\n';
+      s += '   Reemplaza este archivo en la carpeta de discoteca.html y recarga.\n';
+      s += '   ─────────────────────────────────────────────────────────────── */\n';
+      s += 'window.CONFIG = {\n';
+  SECTIONS.forEach(([title, fields]) => {
+    s += '\n  // ' + title + '\n';
+    fields.forEach(([key]) => {
+      s += '  ' + (key + ':').padEnd(20) + fmt(key) + ','.padEnd(2);
+      s += '   // ' + COMMENTS[key] + '\n';
+    });
+  });
+  s += '};\n';
+  return s;
+}
+
+const out = document.getElementById('out');
+const msg = document.getElementById('msg');
+function render(){ out.textContent = buildText(); }
+render();
+
+document.getElementById('download').onclick = () => {
+  const blob = new Blob([buildText()], {type:'text/javascript'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'config.js';
+  document.body.appendChild(a); a.click(); a.remove();
+  msg.innerHTML = '<span class="ok">✓ descargado.</span> Movelo junto a discoteca.html y recargá la obra.';
+};
+document.getElementById('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(buildText()); msg.innerHTML = '<span class="ok">✓ copiado al portapapeles.</span>'; }
+  catch(e){ msg.textContent = 'No se pudo copiar; usá el botón de descarga.'; }
+};
+</script>
+</body>
+</html>

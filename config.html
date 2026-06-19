@@ -106,7 +106,7 @@
 
 <script>
 const DEFAULTS = {
-  cuerpos:13, coreografia:100, cambioBaile:0,
+  cuerpos:13, coreografia:100, cambioBaile:0, estela:30,
   formacion:'aleatorio',
   rotacionAzar:100, cercania:14, tamanoAzar:0,
   vistaCamara:'libre', camVelocidad:40,
@@ -123,6 +123,7 @@ const SECTIONS = [
     ['cuerpos','cuerpos',1,30,1,'nº de cuerpos (1–30)'],
     ['coreografia','coreografía',0,100,1,'0 = todos el mismo baile · 100 = cada quien el suyo'],
     ['cambioBaile','cambio de baile',0,100,1,'frecuencia de cambio por modelo (0 = nunca)'],
+    ['estela','estela',0,100,1,'estela de movimiento (0 = off)'],
   ]],
   ['espacio', [
     ['formacion','formación','select',['aleatorio','cuadricula','anillo','anillo_fuera','circulo','fila','espiral'],0,'aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral'],

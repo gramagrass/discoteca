@@ -608,10 +608,10 @@ const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); }
 function applyBodyLook(){
   if (!bodyMat) return;
-  const dark = masterBright < 0;                 // negative → dark, but with some sheen/form
-  bodyMat.color.setHex(dark ? 0x16161b : 0xc9c9cd);
-  bodyMat.roughness = dark ? 0.5 : 0.92;
-  bodyMat.metalness = dark ? 0.25 : 0.0;
+  const dark = masterBright < 0;                 // negative → dark grey, lit enough to read form
+  bodyMat.color.setHex(dark ? 0x4a4a54 : 0xc9c9cd);
+  bodyMat.roughness = dark ? 0.72 : 0.92;        // matte (diffuse), not glossy speckle
+  bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
 }
 
@@ -663,7 +663,7 @@ function tick(now){
   });
   // in negative mode the SAME colour lights still touch the bodies faintly, so the dark
   // forms keep some volume/sheen instead of reading as flat cut-outs.
-  const NEG_BODY = amt * 3.0;
+  const NEG_BODY = amt * 4.5;
 
   if (strobeOn){
     // brief flash, ~16% duty cycle, at its own rate (Hz), scaled by the dimmer.

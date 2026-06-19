@@ -194,8 +194,8 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
 
     <div class="foot">
       <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> bailes · mocap real</span>
-      <span><kbd>espacio</kbd> nuevo reparto · <kbd>E</kbd> estrobo · <kbd>S</kbd> sonido</span>
-      <span><kbd>H</kbd> ocultar panel · <kbd>F</kbd> pantalla completa</span>
+      <span><kbd>R</kbd> tirar dados · <kbd>espacio</kbd> nuevo reparto · <kbd>E</kbd> estrobo · <kbd>S</kbd> sonido</span>
+      <span><kbd>C</kbd> cámara · <kbd>F</kbd> formación · <kbd>T</kbd> tamaño · <kbd>H</kbd> panel · <kbd>P</kbd> pantalla completa</span>
     </div>
   </div>
 </div>
@@ -710,11 +710,15 @@ $('sound').onclick = () => {
 const ui = document.getElementById('ui');
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
-  if (e.code === 'Space' || k === 'r'){ e.preventDefault(); assignDances(); }
-  else if (k === 'e') setStrobe(!strobeOn);
-  else if (k === 's') $('sound').click();
-  else if (k === 'h') ui.classList.toggle('hidden');
-  else if (k === 'f'){
+  if (k === 'r'){ e.preventDefault(); randomizeAll(); }            // tirar dados
+  else if (e.code === 'Space'){ e.preventDefault(); assignDances(); } // nuevo reparto de bailes
+  else if (k === 'e') setStrobe(!strobeOn);                         // estrobo on/off
+  else if (k === 's') $('sound').click();                          // sonido on/off
+  else if (k === 'c'){ camMode = CAMMODES[(CAMMODES.indexOf(camMode) + 1) % CAMMODES.length]; cam.fly = null; cam.tvEnd = 0; syncUI(); }   // cambiar cámara
+  else if (k === 'f'){ formation = FORMATIONS[(FORMATIONS.indexOf(formation) + 1) % FORMATIONS.length]; applyLayout(); syncUI(); }          // cambiar formación
+  else if (k === 't'){ sizeVar = Math.random() * 0.6; applyLayout(); syncUI(); }   // tamaño azar al azar
+  else if (k === 'h') ui.classList.toggle('hidden');               // ocultar panel
+  else if (k === 'p'){                                             // pantalla completa
     if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
     else document.exitFullscreen?.();
   }

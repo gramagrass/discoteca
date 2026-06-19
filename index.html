@@ -259,7 +259,7 @@ let formation    = cfg.formacion;               // 'aleatorio' | 'cuadricula' | 
 let vintage      = cfg.vintage / 100;           // 0 = off · 1 = entrelazado fuerte
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
-const CLOSE_MIN = 0.9, CLOSE_MAX = 12;   // disc radius the crowd fills
+const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
 
 // ---------------------------------------------------------------- asset urls (locales: obra autónoma; servidos desde ./assets)
 const BODY_URLS = [
@@ -306,7 +306,7 @@ const VintageShader = {
     void main(){
       float a = uAmount;
       vec2 c = vUv - 0.5;
-      float lines = 486.0;                                  // ~líneas de video SD
+      float lines = uResolution.y;                          // una banda por píxel → bandas finas
       float line  = floor(vUv.y * lines);
       float parity = mod(line, 2.0);
       float field  = mod(floor(uTime * 50.0), 2.0);         // campos a ~50 Hz
@@ -515,21 +515,21 @@ function applyLayout(){
       case 'cuadricula': {
         const cols = Math.max(1, Math.round(Math.sqrt(n)));
         const rows = Math.ceil(n / cols);
-        const sp = spread * 0.5 + 0.6;
+        const sp = spread * 0.62;
         x = ((i % cols) - (cols - 1) / 2) * sp;
         z = (((i / cols) | 0) - (rows - 1) / 2) * sp;
         break;
       }
       case 'anillo': {               // círculo exterior, mirando al centro
         const a = (i / n) * TAU;
-        const R = spread * 0.85 + 0.5;
+        const R = spread * 0.95;
         x = Math.cos(a) * R; z = Math.sin(a) * R;
         faceBase = Math.atan2(-x, -z) + FACE_OFFSET;
         break;
       }
       case 'anillo_fuera': {         // círculo exterior, mirando hacia afuera
         const a = (i / n) * TAU;
-        const R = spread * 0.85 + 0.5;
+        const R = spread * 0.95;
         x = Math.cos(a) * R; z = Math.sin(a) * R;
         faceBase = Math.atan2(x, z) + FACE_OFFSET;
         break;
@@ -541,7 +541,7 @@ function applyLayout(){
         break;
       }
       case 'fila': {                 // fila india
-        const sp = spread * 0.4 + 0.5;
+        const sp = spread * 0.55;
         x = (i - (n - 1) / 2) * sp; z = 0;
         break;
       }

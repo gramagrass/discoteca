@@ -321,7 +321,8 @@ const dome = new THREE.Mesh(
       varying vec3 vDir; uniform vec3 uDir[3]; uniform vec3 uCol[3];
       void main(){
         vec3 c = vec3(0.0); vec3 d = normalize(vDir);
-        for(int i=0;i<3;i++){ float g = max(dot(d, normalize(uDir[i])), 0.0); c += uCol[i] * pow(g, 4.0); }
+        // each light: a flat tinted floor (0.22) + a broad moving pool (pow .. 2.0)
+        for(int i=0;i<3;i++){ float g = max(dot(d, normalize(uDir[i])), 0.0); c += uCol[i] * (0.22 + pow(g, 2.0)); }
         gl_FragColor = vec4(c, 1.0);
       }`,
   })
@@ -332,7 +333,7 @@ function paintDome(now, inten){
   for (let i = 0; i < 3; i++){
     const l = discoLights[i], a = l.userData.phase + orbit;
     domeUniforms.uDir.value[i].set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
-    domeUniforms.uCol.value[i].copy(l.color).multiplyScalar(Math.min(1.6, inten));
+    domeUniforms.uCol.value[i].copy(l.color).multiplyScalar(Math.min(3.0, inten * 2.4));
   }
 }
 
@@ -676,7 +677,7 @@ function tick(now){
     domeInten = flash;                                    // el fondo destella con los cuerpos
   } else {
     discoLights.forEach(l => l.intensity = l.userData.base * (0.6 + 0.55 * beatPulse) * amt);
-    domeInten = (0.45 + 0.6 * beatPulse) * amt;
+    domeInten = (0.65 + 0.5 * beatPulse) * amt;
   }
 
   // background: black in +, colour-painted dome in −

@@ -233,7 +233,7 @@ const cfg = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 let BPM          = cfg.bpm;
 let COUNT        = cfg.cuerpos;
 let masterBright = cfg.luzGeneral / 100;        // general dimmer (1 = full, →0 = almost black)
-let strobeColor  = parseInt(String(cfg.colorLuz).slice(1), 16);  // strobe flash colour
+let strobeColor  = clampColor(parseInt(String(cfg.colorLuz).slice(1), 16));  // tint (dark / desaturated)
 let rotRand      = cfg.rotacionAzar / 100;      // 0 = all same way, 1 = fully random
 let closeness    = cfg.cercania / 100;          // 0 = packed blob, 1 = scattered
 let sizeVar      = cfg.tamanoAzar / 100;        // 0 = all equal, 1 = hand-size → giant
@@ -292,17 +292,15 @@ key.shadow.camera.near = 1;   key.shadow.camera.far = 40;
 key.shadow.bias = -0.0006;
 scene.add(key);
 
-// coloured disco lights that orbit and pulse on the beat
-const discoColors = [0xff2d7a, 0x18d6ff, 0xffb43a];
-const discoLights = discoColors.map((c, i) => {
-  const l = new THREE.PointLight(c, 14, 26, 2);
-  l.userData = { base: 14, phase: (i / discoColors.length) * TAU, radius: 6.5 + i * 0.8, h: 4.4 + i * 0.6 };
+// coloured disco lights that orbit and pulse on the beat.
+// no visible source (no orb) — only the light they cast. Two follow the chosen
+// "color luz" (dominant tint), one stays warm yellow.
+const YELLOW = 0xffd24a;
+const discoLights = [0, 1, 2].map((i) => {
+  const tint = i < 2 ? 'pick' : 'yellow';
+  const l = new THREE.PointLight(tint === 'pick' ? strobeColor : YELLOW, 14, 26, 2);
+  l.userData = { base: 14, phase: (i / 3) * TAU, radius: 6.5 + i * 0.8, h: 4.4 + i * 0.6, tint };
   scene.add(l);
-  const orb = new THREE.Mesh(
-    new THREE.SphereGeometry(0.12, 16, 12),
-    new THREE.MeshBasicMaterial({ color: c })
-  );
-  l.add(orb);
   return l;
 });
 
@@ -330,6 +328,15 @@ const loader = new GLTFLoader();
 const load = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
 const ri = (a) => a[(Math.random()*a.length)|0];
 const rf = (a,b) => a + Math.random()*(b-a);
+const FORMATIONS = ['aleatorio','cuadricula','anillo','anillo_fuera','circulo','fila','espiral'];
+const CAMMODES   = ['libre','orbita','sobrevuelo','tv','cenital','cenital_inclinada'];
+
+// restrict any colour to a darker, less-saturated range (the scene's tint palette)
+function clampColor(hex){
+  const c = new THREE.Color(hex); const hsl = {}; c.getHSL(hsl);
+  c.setHSL(hsl.h, Math.min(hsl.s, 0.5), Math.min(Math.max(hsl.l, 0.12), 0.55));
+  return c.getHex();
+}
 
 let bodies = [];   // [{scene}]
 let clips  = [];   // [AnimationClip]
@@ -461,13 +468,37 @@ function setModelDance(c, clip, phaseMul = 1, scatterMul = 1){
   c.action = action;
 }
 
-// reparte bailes a todos (tirar dados); 'choreo' controla unísono ↔ variedad
+// reparte bailes a todos; 'choreo' controla unísono ↔ variedad
 function assignDances(){
   const lead = ri(clips);
   for (const c of crowd){
     const unique = Math.random() < choreo;
     setModelDance(c, unique ? ri(clips) : lead, unique ? 1 : choreo, choreo);
   }
+}
+
+// "tirar dados": composición aleatoria completa (todo menos la velocidad de cámara)
+function randomizeAll(){
+  COUNT       = 6 + (Math.random() * 25 | 0);          // 6..30
+  choreo      = Math.random();
+  danceChange = Math.random() * 0.6;
+  formation   = ri(FORMATIONS);
+  rotRand     = Math.random();
+  closeness   = Math.random();
+  sizeVar     = Math.random() * 0.5;
+  camMode     = ri(CAMMODES);
+  cam.baseAz  = Math.random() * TAU; cam.el = rf(0.1, 1.0); cam.rad = rf(5, 14);
+  cam.fly = null; cam.tvEnd = 0;
+  masterBright = rf(0.5, 1.0);
+  strobeColor  = new THREE.Color().setHSL(Math.random(), rf(0.15, 0.5), rf(0.18, 0.52)).getHex();
+  BPM         = 80 + (Math.random() * 50 | 0);
+  strobeHz    = rf(2, 14);
+  strobePeak  = rf(1.5, 8);
+  baseLight   = Math.random() * 0.5;
+  discoLights.forEach(l => l.color.set(l.userData.tint === 'pick' ? strobeColor : YELLOW));
+  placeCrowd(COUNT);                                   // reconstruye + aplica formación + reparte bailes
+  setStrobe(Math.random() < 0.5);
+  syncUI();
 }
 
 // ---------------------------------------------------------------- camera control (drag + wheel + gentle sway)
@@ -484,7 +515,7 @@ function newFly(fa, fe, fr){
            toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(4.5, 15), t: 0 };
 }
 function newTvShot(now){
-  cam.tvEnd  = now + lerp(5200, 650, camSpeed);   // más velocidad → cortes más seguidos
+  cam.tvEnd  = now + lerp(11000, 450, camSpeed * camSpeed);   // extremo bajo: cortes muy lentos
   cam.tvAz   = Math.random() * TAU;
   cam.tvEl   = rf(0.08, 0.95);
   cam.tvRad  = rf(3.8, 13);
@@ -564,6 +595,7 @@ let prev = performance.now();
 let beatClock = 0;
 let strobeClock = 0;
 let lastReadout = 0;
+let flashId = -1, flashAmp = 1;
 function tick(now){
   const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
   beatClock += dt * (BPM / 60);
@@ -580,10 +612,13 @@ function tick(now){
   }
 
   if (strobeOn){
-    // brief flash, ~16% duty cycle, at its own rate (Hz), scaled by the dimmer
+    // brief flash, ~16% duty cycle, at its own rate (Hz), scaled by the dimmer.
+    // each flash gets a slightly different amplitude so it's not mechanically identical.
     strobeClock += dt * strobeHz;
     const ph = strobeClock % 1;
-    key.intensity = (ph < 0.16 ? strobePeak : baseLight) * masterBright;
+    const fid = Math.floor(strobeClock);
+    if (fid !== flashId){ flashId = fid; flashAmp = rf(0.55, 1.0); }
+    key.intensity = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * masterBright;
   } else {
     // disco lights: slow orbit + beat pulse
     const orbit = (now / 1000) * 0.25;
@@ -595,20 +630,23 @@ function tick(now){
   }
 
   // ---- cámara según modo ----
+  // cs: curva cuadrática → el extremo bajo del slider es MUY lento y sutil
   const t = now / 1000;
+  const cs = camSpeed * camSpeed;
   let fAz, fEl = cam.el, fRad = cam.rad;
   switch (camMode){
     case 'orbita':
-      cam.baseAz += dt * (0.15 + camSpeed * 1.1);
+      cam.baseAz += dt * (0.012 + cs * 1.25);
       fAz = cam.baseAz; break;
     case 'cenital':                                   // casi recto desde arriba
+      cam.baseAz += dt * (0.004 + cs * 0.5);
       fAz = cam.baseAz; fEl = 1.46; break;
     case 'cenital_inclinada':                         // picado, girando lento
-      cam.baseAz += dt * (0.05 + camSpeed * 0.5);
+      cam.baseAz += dt * (0.006 + cs * 0.55);
       fAz = cam.baseAz; fEl = 1.02; break;
     case 'sobrevuelo': {                              // vuelo suave entre puntos al azar
       if (!cam.fly) cam.fly = newFly(cam.baseAz, cam.el, cam.rad);
-      cam.fly.t += dt * (0.04 + camSpeed * 0.30);
+      cam.fly.t += dt * (0.008 + cs * 0.42);
       if (cam.fly.t >= 1) cam.fly = newFly(cam.fly.toAz, cam.fly.toEl, cam.fly.toRad);
       const k = smooth(cam.fly.t);
       fAz  = lerp(cam.fly.fromAz,  cam.fly.toAz,  k);
@@ -646,12 +684,17 @@ function tick(now){
 
 // ---------------------------------------------------------------- UI wiring
 const $ = id => document.getElementById(id);
-$('reroll').onclick = assignDances;
+$('reroll').onclick = randomizeAll;       // composición aleatoria completa (menos velocidad cámara)
 $('strobe').onclick = () => setStrobe(!strobeOn);
 $('s-bpm').oninput = e => { BPM = +e.target.value; $('v-bpm').textContent = BPM; };
 $('s-count').oninput = e => { COUNT = +e.target.value; $('v-count').textContent = COUNT; $('m-count').textContent = COUNT; placeCrowd(COUNT); };
 $('s-bright').oninput = e => { masterBright = +e.target.value; $('v-bright').textContent = Math.round(masterBright*100); refreshStatic(); };
-$('c-strobe').oninput = e => { strobeColor = parseInt(e.target.value.slice(1), 16); if (strobeOn) key.color.set(strobeColor); };
+$('c-strobe').oninput = e => {
+  strobeColor = clampColor(parseInt(e.target.value.slice(1), 16));
+  e.target.value = '#' + strobeColor.toString(16).padStart(6,'0');   // refleja el valor restringido
+  if (strobeOn) key.color.set(strobeColor);
+  discoLights.forEach(l => { if (l.userData.tint === 'pick') l.color.set(strobeColor); });
+};
 $('s-rot').oninput  = e => { rotRand   = +e.target.value; $('v-rot').textContent   = Math.round(rotRand*100);   applyLayout(); };
 $('s-close').oninput = e => { closeness = +e.target.value; $('v-close').textContent = Math.round(closeness*100); applyLayout(); };
 $('s-size').oninput  = e => { sizeVar   = +e.target.value; $('v-size').textContent  = Math.round(sizeVar*100);   applyLayout(); };

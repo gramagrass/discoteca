@@ -294,12 +294,13 @@ scene.add(key);
 
 // coloured disco lights that orbit and pulse on the beat.
 // no visible source (no orb) — only the light they cast. Two follow the chosen
-// "color luz" (dominant tint), one stays warm yellow.
-const YELLOW = 0xffd24a;
+// "color luz" (dominant tint); one is a dim white accent.
+const ACCENT = 0xeef0f5;   // soft white accent
 const discoLights = [0, 1, 2].map((i) => {
-  const tint = i < 2 ? 'pick' : 'yellow';
-  const l = new THREE.PointLight(tint === 'pick' ? strobeColor : YELLOW, 14, 26, 2);
-  l.userData = { base: 14, phase: (i / 3) * TAU, radius: 6.5 + i * 0.8, h: 4.4 + i * 0.6, tint };
+  const tint = i < 2 ? 'pick' : 'accent';
+  const l = new THREE.PointLight(tint === 'pick' ? strobeColor : ACCENT, 14, 26, 2);
+  // the accent light is dimmer so the picked colour dominates the scene
+  l.userData = { base: 14, phase: (i / 3) * TAU, radius: 6.5 + i * 0.8, h: 4.4 + i * 0.6, tint, mult: tint === 'pick' ? 1.0 : 0.4 };
   scene.add(l);
   return l;
 });
@@ -333,7 +334,7 @@ function paintDome(now, inten){
   for (let i = 0; i < 3; i++){
     const l = discoLights[i], a = l.userData.phase + orbit;
     domeUniforms.uDir.value[i].set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
-    domeUniforms.uCol.value[i].copy(l.color).multiplyScalar(Math.min(3.0, inten * 2.4));
+    domeUniforms.uCol.value[i].copy(l.color).multiplyScalar(Math.min(3.0, inten * 2.4) * l.userData.mult);
   }
 }
 
@@ -682,7 +683,7 @@ function tick(now){
     discoLights.forEach(l => l.intensity = 0);            // sin luces de color durante estrobo
     domeInten = flash;                                    // el fondo destella con los cuerpos
   } else {
-    discoLights.forEach(l => l.intensity = l.userData.base * (0.6 + 0.55 * beatPulse) * amt * (neg ? 1.8 : 1));
+    discoLights.forEach(l => l.intensity = l.userData.base * l.userData.mult * (0.6 + 0.55 * beatPulse) * amt * (neg ? 1.8 : 1));
     domeInten = (0.65 + 0.5 * beatPulse) * amt;
   }
 

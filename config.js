@@ -16,6 +16,10 @@ window.CONFIG = {
   estroboIntensidad: 1.6,        // fuerza del destello (0–12)
   luzBase:           33,         // luz entre destellos 0–100 (0 = negro)
   coreografia:       100,        // 0 = todos el mismo baile, 100 = cada quien el suyo
+  cambioBaile:       0,          // frecuencia de cambio de baile por modelo 0–100 (0 = nunca)
+
+  // disposición espacial: aleatorio | cuadricula | anillo | circulo | fila | espiral
+  formacion:         "aleatorio",
 
   estrobo:           true,       // arrancar en modo estrobo
   sonido:            false,      // arrancar con sonido (suena al primer clic)
@@ -24,5 +28,9 @@ window.CONFIG = {
   // cámara — lee los valores en vivo en el panel ("cámara") y cópialos aquí
   camAngulo:         293,        // ángulo horizontal en grados
   camAltura:         2,          // altura de la cámara en grados
-  camZoom:           3.8         // distancia (acercar/alejar)
+  camZoom:           3.8,        // distancia (acercar/alejar)
+
+  // modo de cámara: libre | orbita | sobrevuelo | tv | cenital | cenital_inclinada
+  vistaCamara:       "libre",
+  camVelocidad:      40          // velocidad de cámara 0–100 (cortes / vuelo / órbita)
 };

@@ -56,6 +56,11 @@
   input[type=range]::-moz-range-thumb{
     width:11px; height:11px; border-radius:50%; background:var(--ink); border:none; cursor:pointer;
   }
+  select{
+    font-family:inherit; font-size:11px; color:var(--ink); background:#0c0c12;
+    border:1px solid var(--line); padding:6px 8px; cursor:pointer; width:100%; border-radius:3px;
+  }
+  select:focus{ outline:none; border-color:var(--ink); }
   input[type=color]{
     -webkit-appearance:none; appearance:none; width:42px; height:18px;
     background:transparent; border:1px solid var(--line); padding:0; cursor:pointer;
@@ -107,8 +112,23 @@
       <label>coreografía <span class="val" id="v-choreo">100</span></label>
       <input id="s-choreo" type="range" min="0" max="1" step="0.01" value="1">
     </div>
+    <div class="ctl">
+      <label>cambio de baile <span class="val" id="v-dchg">0</span></label>
+      <input id="s-dchg" type="range" min="0" max="1" step="0.01" value="0">
+    </div>
 
     <div class="sec">espacio</div>
+    <div class="ctl">
+      <label>formación</label>
+      <select id="s-form">
+        <option value="aleatorio">aleatorio</option>
+        <option value="cuadricula">cuadrícula</option>
+        <option value="anillo">círculo exterior (al centro)</option>
+        <option value="circulo">círculo relleno</option>
+        <option value="fila">fila india</option>
+        <option value="espiral">espiral</option>
+      </select>
+    </div>
     <div class="ctl">
       <label>rotación azar <span class="val" id="v-rot">15</span></label>
       <input id="s-rot" type="range" min="0" max="1" step="0.01" value="0.15">
@@ -123,6 +143,21 @@
     </div>
 
     <div class="sec">cámara <span class="dim">· arrastra / rueda</span></div>
+    <div class="ctl">
+      <label>vista</label>
+      <select id="s-cam">
+        <option value="libre">libre (arrastrar)</option>
+        <option value="orbita">órbita</option>
+        <option value="sobrevuelo">sobrevuelo aleatorio</option>
+        <option value="tv">edición TV (cortes)</option>
+        <option value="cenital">cenital</option>
+        <option value="cenital_inclinada">cenital inclinada</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>velocidad cámara <span class="val" id="v-camvel">40</span></label>
+      <input id="s-camvel" type="range" min="0" max="1" step="0.01" value="0.40">
+    </div>
     <div class="readout">
 ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zoom">0</b>
     </div>
@@ -188,6 +223,9 @@ const DEFAULTS = {
   estroboVel: 7.5, estroboIntensidad: 4.0, luzBase: 0, coreografia: 100,
   estrobo: false, sonido: false, piso: false,
   camAngulo: 34, camAltura: 13, camZoom: 9.5,   // cámara (grados, grados, distancia)
+  vistaCamara: 'libre', camVelocidad: 40,       // modo de cámara + velocidad
+  cambioBaile: 0,                               // frecuencia de cambio de baile por modelo
+  formacion: 'aleatorio',                       // disposición espacial
 };
 const cfg = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 
@@ -202,22 +240,25 @@ let strobeHz     = cfg.estroboVel;              // strobe flashes per second
 let baseLight    = cfg.luzBase / 100;           // resting light between flashes (0 = black)
 let choreo       = cfg.coreografia / 100;       // 0 = unison · 1 = all different
 let strobePeak   = cfg.estroboIntensidad;       // strobe flash peak intensity
+let camMode      = cfg.vistaCamara;             // 'libre' | 'orbita' | 'sobrevuelo' | 'tv' | 'cenital' | 'cenital_inclinada'
+let camSpeed     = cfg.camVelocidad / 100;      // velocidad de cámara (cortes / vuelo / órbita)
+let danceChange  = cfg.cambioBaile / 100;       // 0 = nunca · 1 = cambios frecuentes por modelo
+let formation    = cfg.formacion;               // 'aleatorio' | 'cuadricula' | 'anillo' | 'circulo' | 'fila' | 'espiral'
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
 const CLOSE_MIN = 0.9, CLOSE_MAX = 12;   // disc radius the crowd fills
 
-// ---------------------------------------------------------------- asset urls (CDN — works on double-click; local copies in /assets)
-const CDN = 'https://cdn.jsdelivr.net/gh/neonm3/readyplayerme_animation-library@master';
+// ---------------------------------------------------------------- asset urls (locales: obra autónoma; servidos desde ./assets)
 const BODY_URLS = [
-  `${CDN}/masculine/glb/Masculine_TPose.glb`,
-  `${CDN}/feminine/glb/Feminine_TPose.glb`,
+  './assets/bodies/Masculine.glb',
+  './assets/bodies/Feminine.glb',
 ];
 const DANCE_NAMES = [
   'M_Dances_001','M_Dances_002','M_Dances_003','M_Dances_004','M_Dances_005',
   'M_Dances_006','M_Dances_007','M_Dances_008','M_Dances_009','M_Dances_011',
   'F_Dances_001','F_Dances_004','F_Dances_005','F_Dances_006','F_Dances_007',
 ];
-const DANCE_URLS = DANCE_NAMES.map(n => `${CDN}/masculine/glb/dance/${n}.glb`);
+const DANCE_URLS = DANCE_NAMES.map(n => './assets/dances/' + n + '.glb');
 
 // ---------------------------------------------------------------- renderer / scene
 const renderer = new THREE.WebGLRenderer({ antialias:true });
@@ -333,6 +374,7 @@ function placeCrowd(n){
       theta: Math.random() * TAU,
       angle: Math.random() * 2 - 1,
       size:  Math.random() * 2 - 1,
+      rate:  0.5 + Math.random(),        // individual dance-change rate multiplier
     };
     scene.add(root);
     const mixer = new THREE.AnimationMixer(root);
@@ -342,36 +384,81 @@ function placeCrowd(n){
   assignDances();
 }
 
-// position / rotation / scale all derived from the live control values
+const FACE_OFFSET = 0;   // si en 'anillo' miran hacia afuera, cambiar a Math.PI
+
+// position / rotation / scale derived from the live controls + chosen formation
 function applyLayout(){
-  const maxR = CLOSE_MIN + (CLOSE_MAX - CLOSE_MIN) * closeness;
-  for (const c of crowd){
+  const n = crowd.length;
+  const spread = CLOSE_MIN + (CLOSE_MAX - CLOSE_MIN) * closeness;   // tamaño global de la formación
+  const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+  crowd.forEach((c, i) => {
     const s = c.root.userData.seed;
     const scale = Math.pow(SIZE_BASE, s.size * sizeVar);
     c.root.scale.setScalar(scale);
-    const r = s.r * maxR;
+    let x = 0, z = 0, faceBase = 0;
+    switch (formation){
+      case 'cuadricula': {
+        const cols = Math.max(1, Math.round(Math.sqrt(n)));
+        const rows = Math.ceil(n / cols);
+        const sp = spread * 0.5 + 0.6;
+        x = ((i % cols) - (cols - 1) / 2) * sp;
+        z = (((i / cols) | 0) - (rows - 1) / 2) * sp;
+        break;
+      }
+      case 'anillo': {               // círculo exterior, mirando al centro
+        const a = (i / n) * TAU;
+        const R = spread * 0.85 + 0.5;
+        x = Math.cos(a) * R; z = Math.sin(a) * R;
+        faceBase = Math.atan2(-x, -z) + FACE_OFFSET;
+        break;
+      }
+      case 'circulo': {              // disco relleno y parejo (phyllotaxis)
+        const r = Math.sqrt((i + 0.5) / n) * spread;
+        const a = i * GOLDEN;
+        x = Math.cos(a) * r; z = Math.sin(a) * r;
+        break;
+      }
+      case 'fila': {                 // fila india
+        const sp = spread * 0.4 + 0.5;
+        x = (i - (n - 1) / 2) * sp; z = 0;
+        break;
+      }
+      case 'espiral': {
+        const a = i * 0.55;
+        const r = (i / Math.max(1, n - 1)) * spread * 1.2;
+        x = Math.cos(a) * r; z = Math.sin(a) * r;
+        break;
+      }
+      default: {                     // aleatorio (disco con semillas estables)
+        const r = s.r * spread;
+        x = Math.cos(s.theta) * r; z = Math.sin(s.theta) * r;
+      }
+    }
     // all bodies share one horizontal mid-plane: centre stays at bodyCenterY for any scale
-    c.root.position.set(Math.cos(s.theta) * r, bodyCenterY * (1 - scale), Math.sin(s.theta) * r);
-    c.root.rotation.y = s.angle * Math.PI * rotRand;
-  }
+    c.root.position.set(x, bodyCenterY * (1 - scale), z);
+    c.root.rotation.y = faceBase + s.angle * Math.PI * rotRand;
+  });
 }
 
-// assign a random dance to each body (the "roll the dice")
+// give one body a new dance with a crossfade
+function setModelDance(c, clip, phaseMul = 1, scatterMul = 1){
+  if (c.action) c.action.fadeOut(0.4);
+  const action = c.mixer.clipAction(clip);
+  action.reset();
+  action.setLoop(THREE.LoopRepeat, Infinity);
+  action.timeScale = 1 + rf(-0.08, 0.08) * scatterMul;
+  action.time = clip.duration * Math.random() * phaseMul;
+  action.fadeIn(0.4);
+  action.play();
+  c.action = action;
+}
+
+// reparte bailes a todos (tirar dados); 'choreo' controla unísono ↔ variedad
 function assignDances(){
-  const lead = ri(clips);                            // the shared dance for the "unison" end
+  const lead = ri(clips);
   for (const c of crowd){
-    if (c.action) c.action.fadeOut(0.25);
-    const unique = Math.random() < choreo;           // more "choreo" → more bodies break off
-    const clip = unique ? ri(clips) : lead;
-    const action = c.mixer.clipAction(clip);
-    action.reset();
-    action.setLoop(THREE.LoopRepeat, Infinity);
-    // tempo + phase scatter also grow with choreo: 0 = locked unison, 1 = each its own
-    action.timeScale = 1 + rf(-0.08, 0.08) * choreo;
-    action.time = clip.duration * Math.random() * (unique ? 1 : choreo);
-    action.fadeIn(0.25);
-    action.play();
-    c.action = action;
+    const unique = Math.random() < choreo;
+    setModelDance(c, unique ? ri(clips) : lead, unique ? 1 : choreo, choreo);
   }
 }
 
@@ -380,7 +467,21 @@ const DEG = Math.PI / 180;
 const cam = {
   az: cfg.camAngulo * DEG, baseAz: cfg.camAngulo * DEG,
   el: cfg.camAltura * DEG, rad: cfg.camZoom,
+  curAz: cfg.camAngulo * DEG, curEl: cfg.camAltura * DEG, curRad: cfg.camZoom,
 };
+const lerp = (a, b, k) => a + (b - a) * k;
+const smooth = k => k * k * (3 - 2 * k);
+function newFly(fa, fe, fr){
+  return { fromAz: fa, fromEl: fe, fromRad: fr,
+           toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(4.5, 15), t: 0 };
+}
+function newTvShot(now){
+  cam.tvEnd  = now + lerp(5200, 650, camSpeed);   // más velocidad → cortes más seguidos
+  cam.tvAz   = Math.random() * TAU;
+  cam.tvEl   = rf(0.08, 0.95);
+  cam.tvRad  = rf(3.8, 13);
+  cam.tvZoom = rf(-0.5, 0.7);                      // zoom lento dentro de la toma
+}
 let dragging = false, lastX = 0, lastY = 0;
 renderer.domElement.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
 addEventListener('pointerup', () => dragging = false);
@@ -462,6 +563,14 @@ function tick(now){
 
   for (const c of crowd) c.mixer.update(dt);
 
+  // cambio de baile espontáneo por modelo (proceso probabilístico → tiempos dispares)
+  if (danceChange > 0 && clips.length){
+    const ratePerSec = danceChange * 0.5;          // máx ~1 cambio cada ~2 s por modelo
+    for (const c of crowd){
+      if (Math.random() < ratePerSec * c.root.userData.seed.rate * dt) setModelDance(c, ri(clips));
+    }
+  }
+
   if (strobeOn){
     // brief flash, ~16% duty cycle, at its own rate (Hz), scaled by the dimmer
     strobeClock += dt * strobeHz;
@@ -477,21 +586,49 @@ function tick(now){
     });
   }
 
-  // camera: user angle + subtle sway
-  cam.az = cam.baseAz + Math.sin(now / 1000 * 0.25) * 0.12;
-  const cx = Math.cos(cam.az) * Math.cos(cam.el) * cam.rad;
-  const cz = Math.sin(cam.az) * Math.cos(cam.el) * cam.rad;
-  const cy = 1.3 + Math.sin(cam.el) * cam.rad;
-  camera.position.set(cx, cy, cz);
+  // ---- cámara según modo ----
+  const t = now / 1000;
+  let fAz, fEl = cam.el, fRad = cam.rad;
+  switch (camMode){
+    case 'orbita':
+      cam.baseAz += dt * (0.15 + camSpeed * 1.1);
+      fAz = cam.baseAz; break;
+    case 'cenital':                                   // casi recto desde arriba
+      fAz = cam.baseAz; fEl = 1.46; break;
+    case 'cenital_inclinada':                         // picado, girando lento
+      cam.baseAz += dt * (0.05 + camSpeed * 0.5);
+      fAz = cam.baseAz; fEl = 1.02; break;
+    case 'sobrevuelo': {                              // vuelo suave entre puntos al azar
+      if (!cam.fly) cam.fly = newFly(cam.baseAz, cam.el, cam.rad);
+      cam.fly.t += dt * (0.04 + camSpeed * 0.30);
+      if (cam.fly.t >= 1) cam.fly = newFly(cam.fly.toAz, cam.fly.toEl, cam.fly.toRad);
+      const k = smooth(cam.fly.t);
+      fAz  = lerp(cam.fly.fromAz,  cam.fly.toAz,  k);
+      fEl  = lerp(cam.fly.fromEl,  cam.fly.toEl,  k);
+      fRad = lerp(cam.fly.fromRad, cam.fly.toRad, k);
+      break;
+    }
+    case 'tv': {                                      // cortes secos + zoom lento
+      if (!cam.tvEnd || now > cam.tvEnd) newTvShot(now);
+      cam.tvRad += dt * cam.tvZoom;
+      fAz = cam.tvAz; fEl = cam.tvEl; fRad = cam.tvRad;
+      break;
+    }
+    default:                                          // libre (arrastrar + vaivén suave)
+      fAz = cam.baseAz + Math.sin(t * 0.25) * 0.12;
+  }
+  fEl  = Math.max(0.04, Math.min(1.5, fEl));
+  fRad = Math.max(3.0,  Math.min(28,  fRad));
+  cam.curAz = fAz; cam.curEl = fEl; cam.curRad = fRad;
+  camera.position.set(Math.cos(fAz) * Math.cos(fEl) * fRad, 1.3 + Math.sin(fEl) * fRad, Math.sin(fAz) * Math.cos(fEl) * fRad);
   camera.lookAt(0, lookY, 0);
 
   // live camera readout (these numbers map straight into config.js)
   if (now - lastReadout > 150){
     lastReadout = now;
-    const azDeg = Math.round(((cam.baseAz / DEG) % 360 + 360) % 360);
-    document.getElementById('r-az').textContent   = azDeg;
-    document.getElementById('r-el').textContent   = Math.round(cam.el / DEG);
-    document.getElementById('r-zoom').textContent = cam.rad.toFixed(1);
+    document.getElementById('r-az').textContent   = Math.round(((cam.curAz / DEG) % 360 + 360) % 360);
+    document.getElementById('r-el').textContent   = Math.round(cam.curEl / DEG);
+    document.getElementById('r-zoom').textContent = cam.curRad.toFixed(1);
   }
 
   scheduleAudio();
@@ -514,6 +651,10 @@ $('s-strobe').oninput = e => { strobeHz = +e.target.value; $('v-strobe').textCon
 $('s-strobei').oninput = e => { strobePeak = +e.target.value; $('v-strobei').textContent = strobePeak.toFixed(1); };
 $('s-base').oninput   = e => { baseLight = +e.target.value; $('v-base').textContent = Math.round(baseLight*100); };
 $('s-choreo').oninput = e => { choreo = +e.target.value; $('v-choreo').textContent = Math.round(choreo*100); assignDances(); };
+$('s-dchg').oninput  = e => { danceChange = +e.target.value; $('v-dchg').textContent = Math.round(danceChange*100); };
+$('s-form').onchange = e => { formation = e.target.value; applyLayout(); };
+$('s-cam').onchange  = e => { camMode = e.target.value; cam.fly = null; cam.tvEnd = 0; };
+$('s-camvel').oninput = e => { camSpeed = +e.target.value; $('v-camvel').textContent = Math.round(camSpeed*100); };
 $('grid').onclick = () => { const v = !grid.visible; grid.visible = v; floor.visible = v; };
 $('sound').onclick = () => {
   if (!audio) startAudio();
@@ -555,6 +696,10 @@ function syncUI(){
   set('s-strobei', strobePeak); $('v-strobei').textContent = strobePeak.toFixed(1);
   set('s-base', baseLight); $('v-base').textContent = Math.round(baseLight*100);
   set('s-choreo', choreo); $('v-choreo').textContent = Math.round(choreo*100);
+  set('s-dchg', danceChange); $('v-dchg').textContent = Math.round(danceChange*100);
+  set('s-form', formation);
+  set('s-cam', camMode);
+  set('s-camvel', camSpeed); $('v-camvel').textContent = Math.round(camSpeed*100);
 }
 // resume audio on first user gesture (browsers block autoplay until then)
 addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended') audio.resume(); });

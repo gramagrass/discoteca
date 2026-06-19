@@ -477,27 +477,19 @@ function assignDances(){
   }
 }
 
-// "tirar dados": composición aleatoria completa (todo menos la velocidad de cámara)
+// "tirar dados": composición aleatoria de cuerpos/espacio/cámara.
+// NO toca: cercanía, nada de luz/estrobo, velocidad de cámara, ni el sonido.
 function randomizeAll(){
   COUNT       = 6 + (Math.random() * 25 | 0);          // 6..30
   choreo      = Math.random();
   danceChange = Math.random() * 0.6;
   formation   = ri(FORMATIONS);
   rotRand     = Math.random();
-  closeness   = Math.random();
   sizeVar     = Math.random() * 0.5;
   camMode     = ri(CAMMODES);
   cam.baseAz  = Math.random() * TAU; cam.el = rf(0.1, 1.0); cam.rad = rf(5, 14);
   cam.fly = null; cam.tvEnd = 0;
-  masterBright = rf(0.5, 1.0);
-  strobeColor  = new THREE.Color().setHSL(Math.random(), rf(0.15, 0.5), rf(0.18, 0.52)).getHex();
-  BPM         = 80 + (Math.random() * 50 | 0);
-  strobeHz    = rf(2, 14);
-  strobePeak  = rf(1.5, 8);
-  baseLight   = Math.random() * 0.5;
-  discoLights.forEach(l => l.color.set(l.userData.tint === 'pick' ? strobeColor : YELLOW));
   placeCrowd(COUNT);                                   // reconstruye + aplica formación + reparte bailes
-  setStrobe(Math.random() < 0.5);
   syncUI();
 }
 

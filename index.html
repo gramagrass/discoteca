@@ -612,8 +612,7 @@ const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); }
 function applyBodyLook(){
   if (!bodyMat) return;
-  const dark = masterBright < 0;                 // negative → same material, just a dark tone
-  bodyMat.color.setHex(dark ? 0x383840 : 0xc9c9cd);
+  bodyMat.color.setHex(0xc9c9cd);                // misma arcilla en + y − (prueba)
   bodyMat.roughness = 0.92;
   bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
@@ -622,7 +621,7 @@ function applyBodyLook(){
 // static (non-flashing) light levels. In negative mode bodies get no light (silhouettes).
 // dark bodies reflect less, so in negative the directional (modelling) light is boosted
 // to recover the chiaroscuro; ambient stays low so shadows keep their depth.
-const KEY_BOOST = 5.5;
+const KEY_BOOST = 1.0;   // material claro → sin refuerzo (luz igual que en positivo)
 function refreshStatic(){
   const amt = Math.abs(masterBright);
   const kb = masterBright < 0 ? KEY_BOOST : 1.0;
@@ -683,7 +682,7 @@ function tick(now){
     discoLights.forEach(l => l.intensity = 0);            // sin luces de color durante estrobo
     domeInten = flash;                                    // el fondo destella con los cuerpos
   } else {
-    discoLights.forEach(l => l.intensity = l.userData.base * l.userData.mult * (0.6 + 0.55 * beatPulse) * amt * (neg ? 1.8 : 1));
+    discoLights.forEach(l => l.intensity = l.userData.base * l.userData.mult * (0.6 + 0.55 * beatPulse) * amt);
     domeInten = (0.65 + 0.5 * beatPulse) * amt;
   }
 

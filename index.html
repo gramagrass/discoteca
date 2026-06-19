@@ -608,10 +608,10 @@ const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); }
 function applyBodyLook(){
   if (!bodyMat) return;
-  const dark = masterBright < 0;                 // negative → black silhouettes
-  bodyMat.color.setHex(dark ? 0x000000 : 0xc9c9cd);
-  bodyMat.roughness = dark ? 1.0 : 0.92;         // matte en ambos casos
-  bodyMat.metalness = 0.0;
+  const dark = masterBright < 0;                 // negative → dark, but with some sheen/form
+  bodyMat.color.setHex(dark ? 0x16161b : 0xc9c9cd);
+  bodyMat.roughness = dark ? 0.5 : 0.92;
+  bodyMat.metalness = dark ? 0.25 : 0.0;
   bodyMat.needsUpdate = true;
 }
 
@@ -626,8 +626,7 @@ function setStrobe(on){
   scene.background.set(on ? 0x000000 : 0x050507);
   scene.fog.color.set(on ? 0x000000 : 0x050507);
   key.color.set(on ? strobeColor : 0xbfc6ff);
-  discoLights.forEach(l => l.visible = !on);   // hides the glowing orbs too
-  refreshStatic();
+  refreshStatic();   // disco-light intensities are driven per-frame in tick()
   $('strobe').textContent = 'estrobo: ' + (on ? 'on' : 'off');
   $('strobe').classList.toggle('primary', on);
 }
@@ -655,6 +654,17 @@ function tick(now){
 
   const neg = masterBright < 0, amt = Math.abs(masterBright);
   dome.visible = neg;
+
+  // disco lights always orbit; their intensity depends on the mode (set below)
+  const orbit = (now / 1000) * 0.25;
+  discoLights.forEach(l => {
+    const a = l.userData.phase + orbit;
+    l.position.set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
+  });
+  // in negative mode the SAME colour lights still touch the bodies faintly, so the dark
+  // forms keep some volume/sheen instead of reading as flat cut-outs.
+  const NEG_BODY = amt * 3.0;
+
   if (strobeOn){
     // brief flash, ~16% duty cycle, at its own rate (Hz), scaled by the dimmer.
     // each flash gets a slightly different amplitude so it's not mechanically identical.
@@ -663,18 +673,23 @@ function tick(now){
     const fid = Math.floor(strobeClock);
     if (fid !== flashId){ flashId = fid; flashAmp = rf(0.55, 1.0); }
     const flash = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * amt;
-    if (neg){ key.intensity = 0; setBg(0x000000); paintDome(now, flash); }  // el fondo destella en manchas
-    else    { key.intensity = flash; setBg(0x000000); }                     // los cuerpos destellan
+    if (neg){
+      key.intensity = 0;
+      discoLights.forEach(l => l.intensity = NEG_BODY);   // volumen tenue
+      setBg(0x000000); paintDome(now, flash);             // el fondo destella en manchas
+    } else {
+      key.intensity = flash;                               // los cuerpos destellan
+      discoLights.forEach(l => l.intensity = 0);           // sin luces de color durante estrobo+
+      setBg(0x000000);
+    }
   } else {
-    // disco lights: slow orbit + beat pulse
-    const orbit = (now / 1000) * 0.25;
-    discoLights.forEach(l => {
-      const a = l.userData.phase + orbit;
-      l.position.set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
-      l.intensity = neg ? 0 : l.userData.base * (0.6 + 0.55 * beatPulse) * amt;
-    });
-    if (neg){ setBg(0x000000); paintDome(now, (0.45 + 0.6 * beatPulse) * amt); }  // manchas de color que laten
-    else      setBg(0x050507);
+    if (neg){
+      discoLights.forEach(l => l.intensity = NEG_BODY);
+      setBg(0x000000); paintDome(now, (0.45 + 0.6 * beatPulse) * amt);  // manchas que laten
+    } else {
+      discoLights.forEach(l => l.intensity = l.userData.base * (0.6 + 0.55 * beatPulse) * amt);
+      setBg(0x050507);
+    }
   }
 
   // ---- cámara según modo ----

@@ -124,6 +124,7 @@
         <option value="aleatorio">aleatorio</option>
         <option value="cuadricula">cuadrícula</option>
         <option value="anillo">círculo exterior (al centro)</option>
+        <option value="anillo_fuera">círculo exterior (hacia afuera)</option>
         <option value="circulo">círculo relleno</option>
         <option value="fila">fila india</option>
         <option value="espiral">espiral</option>
@@ -410,6 +411,13 @@ function applyLayout(){
         const R = spread * 0.85 + 0.5;
         x = Math.cos(a) * R; z = Math.sin(a) * R;
         faceBase = Math.atan2(-x, -z) + FACE_OFFSET;
+        break;
+      }
+      case 'anillo_fuera': {         // círculo exterior, mirando hacia afuera
+        const a = (i / n) * TAU;
+        const R = spread * 0.85 + 0.5;
+        x = Math.cos(a) * R; z = Math.sin(a) * R;
+        faceBase = Math.atan2(x, z) + FACE_OFFSET;
         break;
       }
       case 'circulo': {              // disco relleno y parejo (phyllotaxis)

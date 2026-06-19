@@ -18,7 +18,7 @@ window.CONFIG = {
   coreografia:       100,        // 0 = todos el mismo baile, 100 = cada quien el suyo
   cambioBaile:       0,          // frecuencia de cambio de baile por modelo 0–100 (0 = nunca)
 
-  // disposición espacial: aleatorio | cuadricula | anillo | circulo | fila | espiral
+  // disposición: aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral
   formacion:         "aleatorio",
 
   estrobo:           true,       // arrancar en modo estrobo

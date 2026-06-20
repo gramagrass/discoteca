@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>DISCO.GRAMA.CO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink: #cfd0d6;
+    --ink-dim: #6a6b78;
+    --line: rgba(255,255,255,0.10);
+    --accent: #ff2d7a;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:#050507; overflow:hidden; }
+  canvas{ display:block; }
+  #ui{
+    position:fixed; inset:0; pointer-events:none;
+    font-family:"JetBrains Mono", ui-monospace, monospace;
+    color:var(--ink); user-select:none;
+  }
+  .panel{ pointer-events:auto; position:absolute; }
+  #title{
+    font-size:12px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink);
+    padding-bottom:2px; white-space:nowrap;
+  }
+  .sec{
+    font-size:9px; letter-spacing:0.22em; text-transform:uppercase; color:var(--accent);
+    margin-top:6px; padding-top:11px; border-top:1px solid var(--line);
+  }
+  .sec .dim{ color:var(--ink-dim); letter-spacing:0.06em; }
+  .readout{ font-size:10.5px; color:var(--ink-dim); letter-spacing:0.04em; }
+  .readout b{ color:var(--ink); font-weight:500; }
+  #dock{
+    right:0; top:0; bottom:0; width:230px;
+    display:flex; flex-direction:column; gap:13px; align-items:stretch;
+    padding:18px 18px 24px; overflow-y:auto;
+    background:rgba(5,5,7,0.55); backdrop-filter:blur(8px);
+    border-left:1px solid var(--line);
+  }
+  #dock::-webkit-scrollbar{ width:6px; }
+  #dock::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
+  .ctl{ display:flex; flex-direction:column; gap:6px; }
+  .ctl label{ font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--ink-dim); }
+  .ctl .val{ color:var(--ink); }
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:2px;
+    background:var(--line); outline:none; cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:11px; height:11px; border-radius:50%;
+    background:var(--ink); cursor:pointer; border:none;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:11px; height:11px; border-radius:50%; background:var(--ink); border:none; cursor:pointer;
+  }
+  select{
+    font-family:inherit; font-size:11px; color:var(--ink); background:#0c0c12;
+    border:1px solid var(--line); padding:6px 8px; cursor:pointer; width:100%; border-radius:3px;
+  }
+  select:focus{ outline:none; border-color:var(--ink); }
+  input[type=color]{
+    -webkit-appearance:none; appearance:none; width:42px; height:18px;
+    background:transparent; border:1px solid var(--line); padding:0; cursor:pointer;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper{ padding:2px; }
+  input[type=color]::-webkit-color-swatch{ border:none; border-radius:2px; }
+  button{
+    pointer-events:auto; font-family:inherit; font-size:11px; letter-spacing:0.08em;
+    color:var(--ink); background:transparent; border:1px solid var(--line);
+    padding:8px 14px; cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  button:hover{ border-color:var(--ink); }
+  button.primary{ border-color:var(--accent); color:#fff; }
+  button.primary:hover{ background:rgba(255,45,122,0.12); }
+  .foot{
+    margin-top:8px; padding-top:11px; border-top:1px solid var(--line);
+    display:flex; flex-direction:column; gap:5px;
+    font-size:9.5px; line-height:1.5; color:var(--ink-dim); letter-spacing:0.02em;
+  }
+  .foot b{ color:var(--ink); font-weight:500; }
+  .foot kbd{
+    font-family:inherit; color:var(--ink); border:1px solid var(--line);
+    padding:0 4px; border-radius:3px; font-size:9.5px;
+  }
+  .hidden{ opacity:0 !important; pointer-events:none !important; }
+  #ui *{ transition:opacity .3s ease; }
+  #loader{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:#050507; color:var(--ink-dim); z-index:10;
+    font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px; letter-spacing:0.1em;
+    transition:opacity .5s ease;
+  }
+</style>
+</head>
+<body>
+<div id="loader">cargando cuerpos y bailes…</div>
+
+<div id="ui">
+  <div id="dock" class="panel">
+    <div id="title">DISCO.GRAMA.CO</div>
+    <button id="reroll" class="primary">tirar dados ↻</button>
+
+    <div class="sec">cuerpos</div>
+    <div class="ctl">
+      <label>cuerpos <span class="val" id="v-count">16</span></label>
+      <input id="s-count" type="range" min="1" max="30" step="1" value="16">
+    </div>
+    <div class="ctl">
+      <label>coreografía <span class="val" id="v-choreo">100</span></label>
+      <input id="s-choreo" type="range" min="0" max="1" step="0.01" value="1">
+    </div>
+    <div class="ctl">
+      <label>cambio de baile <span class="val" id="v-dchg">0</span></label>
+      <input id="s-dchg" type="range" min="0" max="1" step="0.01" value="0">
+    </div>
+    <div class="ctl">
+      <label>velocidad <span class="val" id="v-mov">1.0</span>×</label>
+      <input id="s-mov" type="range" min="0" max="1" step="0.01" value="0.5">
+    </div>
+
+    <div class="sec">espacio</div>
+    <div class="ctl">
+      <label>formación</label>
+      <select id="s-form">
+        <option value="aleatorio">aleatorio</option>
+        <option value="cuadricula">cuadrícula</option>
+        <option value="anillo">círculo exterior (al centro)</option>
+        <option value="anillo_fuera">círculo exterior (hacia afuera)</option>
+        <option value="circulo">círculo relleno</option>
+        <option value="fila">fila india</option>
+        <option value="espiral">espiral</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>rotación azar <span class="val" id="v-rot">15</span></label>
+      <input id="s-rot" type="range" min="0" max="1" step="0.01" value="0.15">
+    </div>
+    <div class="ctl">
+      <label>cercanía <span class="val" id="v-close">40</span></label>
+      <input id="s-close" type="range" min="0" max="1" step="0.01" value="0.40">
+    </div>
+    <div class="ctl">
+      <label>tamaño azar <span class="val" id="v-size">0</span></label>
+      <input id="s-size" type="range" min="0" max="1" step="0.01" value="0">
+    </div>
+
+    <div class="sec">cámara <span class="dim">· arrastra / rueda</span></div>
+    <div class="ctl">
+      <label>vista</label>
+      <select id="s-cam">
+        <option value="libre">libre (arrastrar)</option>
+        <option value="orbita">órbita</option>
+        <option value="sobrevuelo">sobrevuelo aleatorio</option>
+        <option value="tv">edición TV (cortes)</option>
+        <option value="cenital">cenital</option>
+        <option value="cenital_inclinada">cenital inclinada</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>velocidad cámara <span class="val" id="v-camvel">40</span></label>
+      <input id="s-camvel" type="range" min="0" max="1" step="0.01" value="0.40">
+    </div>
+    <div class="readout">
+ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zoom">0</b>
+    </div>
+
+    <div class="sec">efecto</div>
+    <div class="ctl">
+      <label>noise <span class="val" id="v-noise">10</span></label>
+      <input id="s-noise" type="range" min="0" max="1" step="0.01" value="0.10">
+    </div>
+
+    <div class="sec">luz / estrobo</div>
+    <div class="ctl">
+      <label>luz general <span class="val" id="v-bright">100</span></label>
+      <input id="s-bright" type="range" min="-1" max="1" step="0.01" value="1">
+    </div>
+    <div class="ctl">
+      <label>color luz</label>
+      <input id="c-strobe" type="color" value="#ffffff">
+    </div>
+    <div class="ctl">
+      <label>bpm (luces/audio) <span class="val" id="v-bpm">112</span></label>
+      <input id="s-bpm" type="range" min="70" max="140" step="1" value="112">
+    </div>
+    <div class="ctl">
+      <label>estrobo vel <span class="val" id="v-strobe">7.5</span> Hz</label>
+      <input id="s-strobe" type="range" min="0.5" max="20" step="0.1" value="7.5">
+    </div>
+    <div class="ctl">
+      <label>estrobo intensidad <span class="val" id="v-strobei">4.0</span></label>
+      <input id="s-strobei" type="range" min="0" max="12" step="0.1" value="4">
+    </div>
+    <div class="ctl">
+      <label>luz base <span class="val" id="v-base">0</span></label>
+      <input id="s-base" type="range" min="0" max="1" step="0.01" value="0">
+    </div>
+    <button id="strobe">estrobo: off</button>
+    <button id="sound">sonido: off</button>
+    <button id="grid">piso</button>
+
+    <div class="foot">
+      <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> bailes · mocap real</span>
+      <span><kbd>R</kbd> tirar dados · <kbd>espacio</kbd> nuevo reparto · <kbd>E</kbd> estrobo · <kbd>S</kbd> sonido</span>
+      <span><kbd>C</kbd> cámara · <kbd>F</kbd> formación · <kbd>T</kbd> tamaño · <kbd>H</kbd> panel · <kbd>P</kbd> pantalla completa</span>
+    </div>
+  </div>
+</div>
+
+<!-- estado inicial editable; si falta, se usan los valores por defecto -->
+<script src="config.js"></script>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const TAU = Math.PI * 2;
+
+// startup state — defaults, overridden by config.js (window.CONFIG) if present
+const DEFAULTS = {
+  cuerpos: 16, bpm: 112, luzGeneral: 100, colorLuz: '#ffffff',
+  rotacionAzar: 15, cercania: 40, tamanoAzar: 0,
+  estroboVel: 7.5, estroboIntensidad: 4.0, luzBase: 0, coreografia: 100,
+  estrobo: false, sonido: false, piso: false,
+  camAngulo: 34, camAltura: 13, camZoom: 9.5,   // cámara (grados, grados, distancia)
+  vistaCamara: 'libre', camVelocidad: 40,       // modo de cámara + velocidad
+  cambioBaile: 0,                               // frecuencia de cambio de baile por modelo
+  formacion: 'aleatorio',                       // disposición espacial
+  movimiento: 50,                               // velocidad del baile 0–100 (50 = normal, 100 = 2×)
+  noise: 10,                                    // ruido de película 0–100 (0 = off)
+};
+const cfg = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
+
+let BPM          = cfg.bpm;
+let COUNT        = cfg.cuerpos;
+let masterBright = cfg.luzGeneral / 100;        // general dimmer (1 = full, →0 = almost black)
+let strobeColor  = clampColor(parseInt(String(cfg.colorLuz).slice(1), 16));  // tint (dark / desaturated)
+let rotRand      = cfg.rotacionAzar / 100;      // 0 = all same way, 1 = fully random
+let closeness    = cfg.cercania / 100;          // 0 = packed blob, 1 = scattered
+let sizeVar      = cfg.tamanoAzar / 100;        // 0 = all equal, 1 = hand-size → giant
+let strobeHz     = cfg.estroboVel;              // strobe flashes per second
+let baseLight    = cfg.luzBase / 100;           // resting light between flashes (0 = black)
+let choreo       = cfg.coreografia / 100;       // 0 = unison · 1 = all different
+let strobePeak   = cfg.estroboIntensidad;       // strobe flash peak intensity
+let camMode      = cfg.vistaCamara;             // 'libre' | 'orbita' | 'sobrevuelo' | 'tv' | 'cenital' | 'cenital_inclinada'
+let camSpeed     = cfg.camVelocidad / 100;      // velocidad de cámara (cortes / vuelo / órbita)
+let danceChange  = cfg.cambioBaile / 100;       // 0 = nunca · 1 = cambios frecuentes por modelo
+let formation    = cfg.formacion;               // 'aleatorio' | 'cuadricula' | 'anillo' | 'circulo' | 'fila' | 'espiral'
+let animSpeed    = cfg.movimiento / 50;         // 0 = quietos · 1 = normal · 2 = doble
+let noise        = cfg.noise / 100;             // 0 = off · 1 = ruido fuerte
+
+const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
+const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
+
+// ---------------------------------------------------------------- asset urls (locales: obra autónoma; servidos desde ./assets)
+const BODY_URLS = [
+  './assets/bodies/Masculine.glb',
+  './assets/bodies/Feminine.glb',
+];
+const DANCE_NAMES = [
+  'M_Dances_001','M_Dances_002','M_Dances_003','M_Dances_004','M_Dances_005',
+  'M_Dances_006','M_Dances_007','M_Dances_008','M_Dances_009','M_Dances_011',
+  'F_Dances_001','F_Dances_004','F_Dances_005','F_Dances_006','F_Dances_007',
+];
+const DANCE_URLS = DANCE_NAMES.map(n => './assets/dances/' + n + '.glb');
+
+// ---------------------------------------------------------------- renderer / scene
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050507);
+scene.fog = new THREE.FogExp2(0x050507, 0.035);
+
+const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
+
+// ---------------------------------------------------------------- post: film noise (only grain)
+const NoiseShader = {
+  uniforms: {
+    tDiffuse:    { value: null },
+    uTime:       { value: 0 },
+    uResolution: { value: new THREE.Vector2(innerWidth, innerHeight) },
+    uAmount:     { value: 0.5 },
+  },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount;
+    varying vec2 vUv;
+    void main(){
+      vec3 col = texture2D(tDiffuse, vUv).rgb;
+      float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
+      col += (g - 0.5) * 0.14 * uAmount;   // ruido animado
+      gl_FragColor = vec4(col, 1.0);
+    }`,
+};
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const noisePass = new ShaderPass(NoiseShader);
+composer.addPass(noisePass);
+composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final, conserva el look
+function applyNoise(){
+  noisePass.enabled = noise > 0.001;
+  noisePass.uniforms.uAmount.value = noise;
+}
+
+// ---------------------------------------------------------------- lights
+const hemi = new THREE.HemisphereLight(0x404a66, 0x05060a, 0.30);
+scene.add(hemi);
+
+const key = new THREE.DirectionalLight(0xbfc6ff, 0.45);
+key.position.set(4, 12, 6);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.camera.left = -10; key.shadow.camera.right = 10;
+key.shadow.camera.top = 10;   key.shadow.camera.bottom = -10;
+key.shadow.camera.near = 1;   key.shadow.camera.far = 40;
+key.shadow.bias = -0.0006;
+scene.add(key);
+
+// coloured disco lights that orbit and pulse on the beat.
+// no visible source (no orb) — only the light they cast. Two follow the chosen
+// "color luz" (dominant tint); one is a dim white accent.
+const ACCENT = 0xeef0f5;   // soft white accent
+const discoLights = [0, 1, 2].map((i) => {
+  const tint = i < 2 ? 'pick' : 'accent';
+  const l = new THREE.PointLight(tint === 'pick' ? strobeColor : ACCENT, 14, 26, 2);
+  // the accent light is dimmer so the picked colour dominates the scene
+  l.userData = { base: 14, phase: (i / 3) * TAU, radius: 6.5 + i * 0.8, h: 4.4 + i * 0.6, tint, mult: tint === 'pick' ? 1.0 : 0.4 };
+  scene.add(l);
+  return l;
+});
+
+// ---------------------------------------------------------------- environment dome
+// only shown when "luz general" is negative: the orbiting lights paint soft, moving
+// colour pools across the backdrop (non-uniform), and the black bodies read as
+// silhouettes against it. Direction-based shader → no light-reach issues.
+const domeUniforms = {
+  uDir: { value: [new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,1), new THREE.Vector3(-1,0,0)] },
+  uCol: { value: [new THREE.Color(), new THREE.Color(), new THREE.Color()] },
+};
+const dome = new THREE.Mesh(
+  new THREE.SphereGeometry(60, 32, 16),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false, uniforms: domeUniforms,
+    vertexShader: `varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `
+      varying vec3 vDir; uniform vec3 uDir[3]; uniform vec3 uCol[3];
+      void main(){
+        vec3 c = vec3(0.0); vec3 d = normalize(vDir);
+        // each light: a flat tinted floor (0.22) + a broad moving pool (pow .. 2.0)
+        for(int i=0;i<3;i++){ float g = max(dot(d, normalize(uDir[i])), 0.0); c += uCol[i] * (0.22 + pow(g, 2.0)); }
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+  })
+);
+dome.visible = false; dome.renderOrder = -1; scene.add(dome);
+function paintDome(now, inten){
+  const orbit = (now / 1000) * 0.25;
+  for (let i = 0; i < 3; i++){
+    const l = discoLights[i], a = l.userData.phase + orbit;
+    domeUniforms.uDir.value[i].set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
+    domeUniforms.uCol.value[i].copy(l.color).multiplyScalar(Math.min(3.0, inten * 2.4) * l.userData.mult);
+  }
+}
+
+// ---------------------------------------------------------------- floor
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(80, 80),
+  new THREE.MeshStandardMaterial({ color: 0x0b0b10, roughness: 0.92, metalness: 0.0 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.receiveShadow = true;
+scene.add(floor);
+
+const grid = new THREE.GridHelper(60, 60, 0x2a2a3a, 0x16161f);
+grid.material.transparent = true;
+grid.material.opacity = 0.25;
+grid.position.y = 0.002;
+scene.add(grid);
+
+// no floor by default — bodies float on a shared mid-plane in the void ("piso" re-enables)
+floor.visible = false;
+grid.visible  = false;
+
+// ---------------------------------------------------------------- load assets
+const loader = new GLTFLoader();
+const load = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+const ri = (a) => a[(Math.random()*a.length)|0];
+const rf = (a,b) => a + Math.random()*(b-a);
+const FORMATIONS = ['aleatorio','cuadricula','anillo','anillo_fuera','circulo','fila','espiral'];
+const CAMMODES   = ['libre','orbita','sobrevuelo','tv','cenital','cenital_inclinada'];
+
+// restrict any colour to a darker, less-saturated range (the scene's tint palette)
+function clampColor(hex){
+  const c = new THREE.Color(hex); const hsl = {}; c.getHSL(hsl);
+  c.setHSL(hsl.h, Math.min(hsl.s, 0.5), Math.min(Math.max(hsl.l, 0.12), 0.55));
+  return c.getHex();
+}
+
+let bodies = [];   // [{scene}]
+let clips  = [];   // [AnimationClip]
+let crowd  = [];   // [{root, mixer, action}]
+let bodyMat;       // shared body material (clay ↔ dark translucent, driven by luz general)
+let bodyCenterY = 0.84;     // vertical centre of a body (measured after load)
+let lookY = 1.0;            // camera focus height = the shared mid-plane
+
+async function loadAssets(){
+  const [bodyGltfs, danceGltfs] = await Promise.all([
+    Promise.all(BODY_URLS.map(load)),
+    Promise.all(DANCE_URLS.map(load)),
+  ]);
+  // override every body material with a uniform matte greyscale "clay" surface —
+  // no skin/clothes colour, so form reads purely through light & shadow.
+  bodyMat = new THREE.MeshStandardMaterial({ color: 0xc9c9cd, roughness: 0.78, metalness: 0.0 });
+  bodies = bodyGltfs.map(g => {
+    g.scene.traverse(o => {
+      if (o.isMesh){ o.castShadow = true; o.frustumCulled = false; o.material = bodyMat; }
+    });
+    return g.scene;
+  });
+  applyBodyLook();
+  // measure a body so we can centre every figure on one shared horizontal plane,
+  // regardless of its scale (so a giant and a hand-sized one share a mid-line).
+  const box = new THREE.Box3().setFromObject(bodies[0]);
+  const cy = (box.min.y + box.max.y) / 2;
+  if (isFinite(cy) && cy > 0.1){ bodyCenterY = cy; lookY = cy; }
+  clips = danceGltfs.map((g, i) => { const c = g.animations[0]; c.name = DANCE_NAMES[i]; return c; });
+}
+
+// ---------------------------------------------------------------- crowd
+function clearCrowd(){
+  crowd.forEach(c => { c.mixer.stopAllAction(); scene.remove(c.root); });
+  crowd = [];
+}
+
+function placeCrowd(n){
+  clearCrowd();
+  for (let i = 0; i < n; i++){
+    const root = cloneSkinned(ri(bodies));
+    // stable per-figure seeds so moving a slider rearranges smoothly, not randomly
+    root.userData.seed = {
+      r:     Math.sqrt(Math.random()),   // uniform fill of a disc
+      theta: Math.random() * TAU,
+      angle: Math.random() * 2 - 1,
+      size:  Math.random() * 2 - 1,
+      rate:  0.5 + Math.random(),        // individual dance-change rate multiplier
+    };
+    scene.add(root);
+    const mixer = new THREE.AnimationMixer(root);
+    crowd.push({ root, mixer, action: null });
+  }
+  applyLayout();
+  assignDances();
+}
+
+const FACE_OFFSET = 0;   // si en 'anillo' miran hacia afuera, cambiar a Math.PI
+
+// position / rotation / scale derived from the live controls + chosen formation
+function applyLayout(){
+  const n = crowd.length;
+  const spread = CLOSE_MIN + (CLOSE_MAX - CLOSE_MIN) * closeness;   // tamaño global de la formación
+  const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+  crowd.forEach((c, i) => {
+    const s = c.root.userData.seed;
+    const scale = Math.pow(SIZE_BASE, s.size * sizeVar);
+    c.root.scale.setScalar(scale);
+    let x = 0, z = 0, faceBase = 0;
+    switch (formation){
+      case 'cuadricula': {
+        const cols = Math.max(1, Math.round(Math.sqrt(n)));
+        const rows = Math.ceil(n / cols);
+        const sp = spread * 0.62;
+        x = ((i % cols) - (cols - 1) / 2) * sp;
+        z = (((i / cols) | 0) - (rows - 1) / 2) * sp;
+        break;
+      }
+      case 'anillo': {               // círculo exterior, mirando al centro
+        const a = (i / n) * TAU;
+        const R = spread * 0.95;
+        x = Math.cos(a) * R; z = Math.sin(a) * R;
+        faceBase = Math.atan2(-x, -z) + FACE_OFFSET;
+        break;
+      }
+      case 'anillo_fuera': {         // círculo exterior, mirando hacia afuera
+        const a = (i / n) * TAU;
+        const R = spread * 0.95;
+        x = Math.cos(a) * R; z = Math.sin(a) * R;
+        faceBase = Math.atan2(x, z) + FACE_OFFSET;
+        break;
+      }
+      case 'circulo': {              // disco relleno y parejo (phyllotaxis)
+        const r = Math.sqrt((i + 0.5) / n) * spread;
+        const a = i * GOLDEN;
+        x = Math.cos(a) * r; z = Math.sin(a) * r;
+        break;
+      }
+      case 'fila': {                 // fila india
+        const sp = spread * 0.55;
+        x = (i - (n - 1) / 2) * sp; z = 0;
+        break;
+      }
+      case 'espiral': {
+        const a = i * 0.55;
+        const r = (i / Math.max(1, n - 1)) * spread * 1.2;
+        x = Math.cos(a) * r; z = Math.sin(a) * r;
+        break;
+      }
+      default: {                     // aleatorio (disco con semillas estables)
+        const r = s.r * spread;
+        x = Math.cos(s.theta) * r; z = Math.sin(s.theta) * r;
+      }
+    }
+    // all bodies share one horizontal mid-plane: centre stays at bodyCenterY for any scale
+    c.root.position.set(x, bodyCenterY * (1 - scale), z);
+    c.root.rotation.y = faceBase + s.angle * Math.PI * rotRand;
+  });
+}
+
+// give one body a new dance with a crossfade
+function setModelDance(c, clip, phaseMul = 1, scatterMul = 1){
+  if (c.action) c.action.fadeOut(0.4);
+  const action = c.mixer.clipAction(clip);
+  action.reset();
+  action.setLoop(THREE.LoopRepeat, Infinity);
+  action.timeScale = 1 + rf(-0.08, 0.08) * scatterMul;
+  action.time = clip.duration * Math.random() * phaseMul;
+  action.fadeIn(0.4);
+  action.play();
+  c.action = action;
+}
+
+// reparte bailes a todos; 'choreo' controla unísono ↔ variedad
+function assignDances(){
+  const lead = ri(clips);
+  for (const c of crowd){
+    const unique = Math.random() < choreo;
+    setModelDance(c, unique ? ri(clips) : lead, unique ? 1 : choreo, choreo);
+  }
+}
+
+// "tirar dados": composición aleatoria de cuerpos/espacio/cámara.
+// NO toca: cercanía, nada de luz/estrobo, velocidad de cámara, ni el sonido.
+function randomizeAll(){
+  COUNT       = 6 + (Math.random() * 25 | 0);          // 6..30
+  choreo      = Math.random();
+  danceChange = Math.random() * 0.6;
+  formation   = ri(FORMATIONS);
+  rotRand     = Math.random();
+  sizeVar     = Math.random() * 0.5;
+  camMode     = ri(CAMMODES);
+  cam.baseAz  = Math.random() * TAU; cam.el = rf(0.1, 1.0); cam.rad = rf(1.2, 8);   // tiende a más cercano
+  cam.fly = null; cam.tvEnd = 0;
+  masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.25, 1.0);  // todo el rango ± evitando la zona muerta en 0
+  applyBodyLook(); refreshStatic();
+  placeCrowd(COUNT);                                   // reconstruye + aplica formación + reparte bailes
+  syncUI();
+}
+
+// ---------------------------------------------------------------- camera control (drag + wheel + gentle sway)
+const DEG = Math.PI / 180;
+const cam = {
+  az: cfg.camAngulo * DEG, baseAz: cfg.camAngulo * DEG,
+  el: cfg.camAltura * DEG, rad: cfg.camZoom,
+  curAz: cfg.camAngulo * DEG, curEl: cfg.camAltura * DEG, curRad: cfg.camZoom,
+};
+const lerp = (a, b, k) => a + (b - a) * k;
+const smooth = k => k * k * (3 - 2 * k);
+function newFly(fa, fe, fr){
+  return { fromAz: fa, fromEl: fe, fromRad: fr,
+           toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(1.5, 12), t: 0 };
+}
+function newTvShot(now){
+  cam.tvEnd  = now + lerp(11000, 450, camSpeed * camSpeed);   // extremo bajo: cortes muy lentos
+  cam.tvAz   = Math.random() * TAU;
+  cam.tvEl   = rf(0.08, 0.95);
+  cam.tvRad  = rf(1.2, 11);
+  cam.tvZoom = rf(-0.5, 0.7);                      // zoom lento dentro de la toma
+}
+let dragging = false, lastX = 0, lastY = 0;
+renderer.domElement.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+addEventListener('pointerup', () => dragging = false);
+addEventListener('pointermove', e => {
+  if (!dragging) return;
+  cam.baseAz -= (e.clientX - lastX) * 0.005;
+  cam.el     = Math.max(0.04, Math.min(1.2, cam.el - (e.clientY - lastY) * 0.005));
+  lastX = e.clientX; lastY = e.clientY;
+});
+renderer.domElement.addEventListener('wheel', e => {
+  e.preventDefault();
+  cam.rad = Math.max(0.4, Math.min(24, cam.rad + e.deltaY * 0.01));   // permite acercarse mucho a la masa
+}, { passive:false });
+
+// ---------------------------------------------------------------- audio (synthesised kick + hat — original, no copyright)
+let audio = null, soundOn = false, nextNote = 0, step = 0;
+function startAudio(){
+  audio = new (window.AudioContext || window.webkitAudioContext)();
+  nextNote = audio.currentTime + 0.05; step = 0;
+}
+function kick(t){
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(48, t+0.12);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6, t+0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+0.22);
+  o.connect(g).connect(audio.destination); o.start(t); o.stop(t+0.24);
+}
+function hat(t){
+  const b = audio.createBuffer(1, 1024, audio.sampleRate), d = b.getChannelData(0);
+  for (let i=0;i<1024;i++) d[i] = Math.random()*2-1;
+  const s = audio.createBufferSource(); s.buffer = b;
+  const hp = audio.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7000;
+  const g = audio.createGain();
+  g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.0001, t+0.05);
+  s.connect(hp).connect(g).connect(audio.destination); s.start(t); s.stop(t+0.06);
+}
+function scheduleAudio(){
+  if (!soundOn || !audio) return;
+  const spb = 60 / BPM;
+  while (nextNote < audio.currentTime + 0.1){
+    if (step % 2 === 0) kick(nextNote);
+    hat(nextNote);
+    nextNote += spb / 2;
+    step++;
+  }
+}
+
+// ---------------------------------------------------------------- strobe mode
+// dark room, colour lights off, a single white flash that reveals the bodies in
+// frozen poses. flash rate is set in Hz by the "estrobo vel" slider (independent of bpm).
+let strobeOn = false;
+const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
+
+// "luz general" (masterBright) is signed — it INVERTS where the light lands:
+//   +1 … 0  → light paints the bodies (clay-grey), background stays black.
+//    0 …-1  → bodies go flat black (silhouettes); the light/colour moves to the
+//             environment, so the silhouettes read against a glowing backdrop.
+// magnitude = how much light; sign = bodies-lit (+) vs background-lit (−).
+function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); }
+function applyBodyLook(){
+  if (!bodyMat) return;
+  bodyMat.color.setHex(0xc9c9cd);                // misma arcilla en + y − (prueba)
+  bodyMat.roughness = 0.92;
+  bodyMat.metalness = 0.0;
+  bodyMat.needsUpdate = true;
+}
+
+// static (non-flashing) light levels. In negative mode bodies get no light (silhouettes).
+// dark bodies reflect less, so in negative the directional (modelling) light is boosted
+// to recover the chiaroscuro; ambient stays low so shadows keep their depth.
+const KEY_BOOST = 1.0;   // material claro → sin refuerzo (luz igual que en positivo)
+function refreshStatic(){
+  const amt = Math.abs(masterBright);
+  const kb = masterBright < 0 ? KEY_BOOST : 1.0;
+  hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;
+  if (!strobeOn) key.intensity = KEY_DISCO * amt * kb;
+}
+function setStrobe(on){
+  strobeOn = on;
+  scene.background.set(on ? 0x000000 : 0x050507);
+  scene.fog.color.set(on ? 0x000000 : 0x050507);
+  key.color.set(on ? strobeColor : 0xbfc6ff);
+  refreshStatic();   // disco-light intensities are driven per-frame in tick()
+  $('strobe').textContent = 'estrobo: ' + (on ? 'on' : 'off');
+  $('strobe').classList.toggle('primary', on);
+}
+
+// ---------------------------------------------------------------- main loop
+let prev = performance.now();
+let beatClock = 0;
+let strobeClock = 0;
+let lastReadout = 0;
+let flashId = -1, flashAmp = 1;
+function tick(now){
+  const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
+  beatClock += dt * (BPM / 60);
+  const beatPulse = Math.pow(0.5 - 0.5 * Math.cos(beatClock * TAU), 1.25);
+
+  for (const c of crowd) c.mixer.update(dt * animSpeed);   // velocidad global del baile
+
+  // cambio de baile espontáneo por modelo (proceso probabilístico → tiempos dispares)
+  if (danceChange > 0 && clips.length){
+    const ratePerSec = danceChange * 0.5;          // máx ~1 cambio cada ~2 s por modelo
+    for (const c of crowd){
+      if (Math.random() < ratePerSec * c.root.userData.seed.rate * dt) setModelDance(c, ri(clips));
+    }
+  }
+
+  const neg = masterBright < 0, amt = Math.abs(masterBright);
+  dome.visible = neg;
+
+  // disco lights always orbit
+  const orbit = (now / 1000) * 0.25;
+  discoLights.forEach(l => {
+    const a = l.userData.phase + orbit;
+    l.position.set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
+  });
+
+  // BODIES are lit identically whether luz general is + or − (same key/hemi/disco).
+  // The only difference in − is: dark material (handled) + a colour-lit background (dome).
+  let domeInten;
+  if (strobeOn){
+    strobeClock += dt * strobeHz;
+    const ph = strobeClock % 1;
+    const fid = Math.floor(strobeClock);
+    if (fid !== flashId){ flashId = fid; flashAmp = rf(0.55, 1.0); }
+    const flash = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * amt;
+    key.intensity = flash * (neg ? KEY_BOOST : 1);        // los cuerpos oscuros también destellan con cuerpo
+    discoLights.forEach(l => l.intensity = 0);            // sin luces de color durante estrobo
+    domeInten = flash;                                    // el fondo destella con los cuerpos
+  } else {
+    discoLights.forEach(l => l.intensity = l.userData.base * l.userData.mult * (0.6 + 0.55 * beatPulse) * amt);
+    domeInten = (0.65 + 0.5 * beatPulse) * amt;
+  }
+
+  // background: black in +, colour-painted dome in −
+  if (neg){ setBg(0x000000); paintDome(now, domeInten); }
+  else      setBg(strobeOn ? 0x000000 : 0x050507);
+
+  // ---- cámara según modo ----
+  // cs: curva cuadrática → el extremo bajo del slider es MUY lento y sutil
+  const t = now / 1000;
+  const cs = camSpeed * camSpeed;
+  let fAz, fEl = cam.el, fRad = cam.rad;
+  switch (camMode){
+    case 'orbita':
+      cam.baseAz += dt * (0.012 + cs * 1.25);
+      fAz = cam.baseAz; break;
+    case 'cenital':                                   // casi recto desde arriba
+      cam.baseAz += dt * (0.004 + cs * 0.5);
+      fAz = cam.baseAz; fEl = 1.46; break;
+    case 'cenital_inclinada':                         // picado, girando lento
+      cam.baseAz += dt * (0.006 + cs * 0.55);
+      fAz = cam.baseAz; fEl = 1.02; break;
+    case 'sobrevuelo': {                              // vuelo suave entre puntos al azar
+      if (!cam.fly) cam.fly = newFly(cam.baseAz, cam.el, cam.rad);
+      cam.fly.t += dt * (0.008 + cs * 0.42);
+      if (cam.fly.t >= 1) cam.fly = newFly(cam.fly.toAz, cam.fly.toEl, cam.fly.toRad);
+      const k = smooth(cam.fly.t);
+      fAz  = lerp(cam.fly.fromAz,  cam.fly.toAz,  k);
+      fEl  = lerp(cam.fly.fromEl,  cam.fly.toEl,  k);
+      fRad = lerp(cam.fly.fromRad, cam.fly.toRad, k);
+      break;
+    }
+    case 'tv': {                                      // cortes secos + zoom lento
+      if (!cam.tvEnd || now > cam.tvEnd) newTvShot(now);
+      cam.tvRad += dt * cam.tvZoom;
+      fAz = cam.tvAz; fEl = cam.tvEl; fRad = cam.tvRad;
+      break;
+    }
+    default:                                          // libre (arrastrar + vaivén suave)
+      fAz = cam.baseAz + Math.sin(t * 0.25) * 0.12;
+  }
+  fEl  = Math.max(0.04, Math.min(1.5, fEl));
+  fRad = Math.max(0.4,  Math.min(28,  fRad));
+  cam.curAz = fAz; cam.curEl = fEl; cam.curRad = fRad;
+  camera.position.set(Math.cos(fAz) * Math.cos(fEl) * fRad, 1.3 + Math.sin(fEl) * fRad, Math.sin(fAz) * Math.cos(fEl) * fRad);
+  camera.lookAt(0, lookY, 0);
+
+  // live camera readout (these numbers map straight into config.js)
+  if (now - lastReadout > 150){
+    lastReadout = now;
+    document.getElementById('r-az').textContent   = Math.round(((cam.curAz / DEG) % 360 + 360) % 360);
+    document.getElementById('r-el').textContent   = Math.round(cam.curEl / DEG);
+    document.getElementById('r-zoom').textContent = cam.curRad.toFixed(1);
+  }
+
+  scheduleAudio();
+  noisePass.uniforms.uTime.value = now / 1000;
+  composer.render();
+  requestAnimationFrame(tick);
+}
+
+// ---------------------------------------------------------------- UI wiring
+const $ = id => document.getElementById(id);
+$('reroll').onclick = randomizeAll;       // composición aleatoria completa (menos velocidad cámara)
+$('strobe').onclick = () => setStrobe(!strobeOn);
+$('s-bpm').oninput = e => { BPM = +e.target.value; $('v-bpm').textContent = BPM; };
+$('s-count').oninput = e => { COUNT = +e.target.value; $('v-count').textContent = COUNT; $('m-count').textContent = COUNT; placeCrowd(COUNT); };
+$('s-bright').oninput = e => { masterBright = +e.target.value; $('v-bright').textContent = Math.round(masterBright*100); refreshStatic(); applyBodyLook(); };
+$('c-strobe').oninput = e => {
+  strobeColor = clampColor(parseInt(e.target.value.slice(1), 16));
+  e.target.value = '#' + strobeColor.toString(16).padStart(6,'0');   // refleja el valor restringido
+  if (strobeOn) key.color.set(strobeColor);
+  discoLights.forEach(l => { if (l.userData.tint === 'pick') l.color.set(strobeColor); });
+};
+$('s-rot').oninput  = e => { rotRand   = +e.target.value; $('v-rot').textContent   = Math.round(rotRand*100);   applyLayout(); };
+$('s-close').oninput = e => { closeness = +e.target.value; $('v-close').textContent = Math.round(closeness*100); applyLayout(); };
+$('s-size').oninput  = e => { sizeVar   = +e.target.value; $('v-size').textContent  = Math.round(sizeVar*100);   applyLayout(); };
+$('s-strobe').oninput = e => { strobeHz = +e.target.value; $('v-strobe').textContent = strobeHz.toFixed(1); };
+$('s-strobei').oninput = e => { strobePeak = +e.target.value; $('v-strobei').textContent = strobePeak.toFixed(1); };
+$('s-base').oninput   = e => { baseLight = +e.target.value; $('v-base').textContent = Math.round(baseLight*100); };
+$('s-choreo').oninput = e => { choreo = +e.target.value; $('v-choreo').textContent = Math.round(choreo*100); assignDances(); };
+$('s-dchg').oninput  = e => { danceChange = +e.target.value; $('v-dchg').textContent = Math.round(danceChange*100); };
+$('s-form').onchange = e => { formation = e.target.value; applyLayout(); };
+$('s-cam').onchange  = e => { camMode = e.target.value; cam.fly = null; cam.tvEnd = 0; };
+$('s-camvel').oninput = e => { camSpeed = +e.target.value; $('v-camvel').textContent = Math.round(camSpeed*100); };
+$('s-noise').oninput = e => { noise = +e.target.value; $('v-noise').textContent = Math.round(noise*100); applyNoise(); };
+$('s-mov').oninput = e => { animSpeed = +e.target.value * 2; $('v-mov').textContent = animSpeed.toFixed(1); };
+$('grid').onclick = () => { const v = !grid.visible; grid.visible = v; floor.visible = v; };
+$('sound').onclick = () => {
+  if (!audio) startAudio();
+  if (audio.state === 'suspended') audio.resume();
+  soundOn = !soundOn;
+  if (soundOn){ nextNote = audio.currentTime + 0.05; step = 0; }
+  $('sound').textContent = 'sonido: ' + (soundOn ? 'on' : 'off');
+};
+
+const ui = document.getElementById('ui');
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'r'){ e.preventDefault(); randomizeAll(); }            // tirar dados
+  else if (e.code === 'Space'){ e.preventDefault(); assignDances(); } // nuevo reparto de bailes
+  else if (k === 'e') setStrobe(!strobeOn);                         // estrobo on/off
+  else if (k === 's') $('sound').click();                          // sonido on/off
+  else if (k === 'c'){ camMode = CAMMODES[(CAMMODES.indexOf(camMode) + 1) % CAMMODES.length]; cam.fly = null; cam.tvEnd = 0; syncUI(); }   // cambiar cámara
+  else if (k === 'f'){ formation = FORMATIONS[(FORMATIONS.indexOf(formation) + 1) % FORMATIONS.length]; applyLayout(); syncUI(); }          // cambiar formación
+  else if (k === 't'){ sizeVar = Math.random() * 0.6; applyLayout(); syncUI(); }   // tamaño azar al azar
+  else if (k === 'h') ui.classList.toggle('hidden');               // ocultar panel
+  else if (k === 'p'){                                             // pantalla completa
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  }
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  noisePass.uniforms.uResolution.value.set(innerWidth, innerHeight);
+});
+
+// push the current values into every control + its readout
+function syncUI(){
+  const set = (id, v) => { const el = $(id); if (el) el.value = v; };
+  set('s-count', COUNT);   $('v-count').textContent = COUNT; $('m-count').textContent = COUNT;
+  set('s-bpm', BPM);       $('v-bpm').textContent = BPM;
+  set('s-bright', masterBright); $('v-bright').textContent = Math.round(masterBright*100);
+  set('c-strobe', '#' + strobeColor.toString(16).padStart(6,'0'));
+  set('s-rot', rotRand);   $('v-rot').textContent = Math.round(rotRand*100);
+  set('s-close', closeness); $('v-close').textContent = Math.round(closeness*100);
+  set('s-size', sizeVar);  $('v-size').textContent = Math.round(sizeVar*100);
+  set('s-strobe', strobeHz); $('v-strobe').textContent = strobeHz.toFixed(1);
+  set('s-strobei', strobePeak); $('v-strobei').textContent = strobePeak.toFixed(1);
+  set('s-base', baseLight); $('v-base').textContent = Math.round(baseLight*100);
+  set('s-choreo', choreo); $('v-choreo').textContent = Math.round(choreo*100);
+  set('s-dchg', danceChange); $('v-dchg').textContent = Math.round(danceChange*100);
+  set('s-mov', animSpeed / 2); $('v-mov').textContent = animSpeed.toFixed(1);
+  set('s-form', formation);
+  set('s-cam', camMode);
+  set('s-camvel', camSpeed); $('v-camvel').textContent = Math.round(camSpeed*100);
+  set('s-noise', noise); $('v-noise').textContent = Math.round(noise*100);
+}
+// resume audio on first user gesture (browsers block autoplay until then)
+addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended') audio.resume(); });
+
+// ---------------------------------------------------------------- boot
+loadAssets().then(() => {
+  $('m-dances').textContent = clips.length;
+  randomizeAll();             // siempre arranca con una composición aleatoria (dado inicial)
+  applyNoise();
+  if (cfg.piso){ grid.visible = true; floor.visible = true; }
+  setStrobe(!!cfg.estrobo);    // also sets disco/strobe light levels via refreshStatic
+  if (cfg.sonido) $('sound').click();   // begins on first click due to autoplay rules
+  const ld = $('loader'); ld.style.opacity = 0; setTimeout(() => ld.remove(), 600);
+  prev = performance.now();
+  requestAnimationFrame(tick);
+}).catch(err => {
+  $('loader').textContent = 'error cargando assets — revisa la conexión';
+  console.error(err);
+});
+</script>
+</body>
+</html>

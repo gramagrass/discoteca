@@ -339,10 +339,19 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050507);
+const bgColor = new THREE.Color(0x050507);
+scene.background = bgColor;
 const FOG_BASE = 0.035, FOG_HAZE = 0.085;   // capa "niebla atmosférica" sube la densidad
-const HAZE = 0x2e3440;                       // color de bruma visible (gris-azulado frío) para la capa niebla
+const HAZE = 0x9aa0ac;                        // bruma clara: los cuerpos se disuelven hacia este tono
 scene.fog = new THREE.FogExp2(0x050507, FOG_BASE);
+// telón de bruma luminoso (gradiente) para la capa niebla — uniforme, en cualquier modo/luz
+const hazeTex = (() => {
+  const cv = document.createElement('canvas'); cv.width = 4; cv.height = 256;
+  const ctx = cv.getContext('2d'); const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#d2d6dd'); g.addColorStop(1, '#697080');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+})();
 
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
 
@@ -393,6 +402,7 @@ function updatePost(){
   gradePass.enabled = (noise > 0.001) || lGrade || lDither;
   bloomPass.enabled = lBloom;
   scene.fog.density = lNiebla ? FOG_HAZE : FOG_BASE;
+  applyBodyLook();   // niebla cambia el material a cuerpos oscuros (siluetas)
 }
 
 // ---------------------------------------------------------------- lights
@@ -763,12 +773,14 @@ const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 //    0 …-1  → bodies go flat black (silhouettes); the light/colour moves to the
 //             environment, so the silhouettes read against a glowing backdrop.
 // magnitude = how much light; sign = bodies-lit (+) vs background-lit (−).
-// el fondo sigue el modo; la niebla, si está activa, tiñe la fog con la bruma visible
-// (desacoplada del fondo) para que los cuerpos lejanos se disuelvan a cualquier nivel de luz
-function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(lNiebla ? HAZE : hex); }
+function setBg(hex){
+  if (scene.background !== bgColor) scene.background = bgColor;
+  bgColor.setHex(hex); scene.fog.color.setHex(hex);
+}
 function applyBodyLook(){
   if (!bodyMat) return;
-  bodyMat.color.setHex(0xc9c9cd);                // misma arcilla en + y − (prueba)
+  // con niebla, cuerpos oscuros (siluetas que se disuelven en la bruma); si no, arcilla clara
+  bodyMat.color.setHex(lNiebla ? 0x20242c : 0xc9c9cd);
   bodyMat.roughness = 0.92;
   bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
@@ -823,7 +835,7 @@ function tick(now){
   }
 
   const neg = masterBright < 0, amt = Math.abs(masterBright);
-  dome.visible = neg;
+  dome.visible = neg && !lNiebla;   // con niebla el telón de bruma reemplaza al domo
 
   // disco lights always orbit
   const orbit = (now / 1000) * 0.25;
@@ -849,9 +861,15 @@ function tick(now){
     domeInten = (0.65 + 0.5 * beatPulse) * amt;
   }
 
-  // background: black in +, colour-painted dome in −
-  if (neg){ setBg(0x000000); paintDome(now, domeInten); }
-  else      setBg(strobeOn ? 0x000000 : 0x050507);
+  // background: niebla = telón de bruma luminoso (cualquier modo); si no, negro en + / domo en −
+  if (lNiebla){
+    if (scene.background !== hazeTex) scene.background = hazeTex;
+    scene.fog.color.setHex(HAZE);
+  } else if (neg){
+    setBg(0x000000); paintDome(now, domeInten);
+  } else {
+    setBg(strobeOn ? 0x000000 : 0x050507);
+  }
 
   // ---- cámara según modo ----
   // cs: curva cuadrática → el extremo bajo del slider es MUY lento y sutil

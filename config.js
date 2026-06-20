@@ -35,15 +35,15 @@ window.CONFIG = {
   luzBase:            33,    // luz entre destellos (0 = negro)
 
   // modo
-  estrobo:            true,    // arrancar en modo estrobo
+  estrobo:            false,    // arrancar en modo estrobo
   sonido:             false,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
   autoRandom:         false,    // re-roll automático cada cierto tiempo
-  capaNiebla:         false,    // niebla atmosférica (INSIDE)
-  capaGrade:          false,    // grade frío/apagado (INSIDE)
-  capaDither:         false,    // dither anti-banding
-  capaBloom:          false,    // bloom
-  fps:                false,    // mostrar FPS
+  capaNiebla:         true,    // niebla atmosférica (INSIDE)
+  capaGrade:          true,    // grade frío/apagado (INSIDE)
+  capaDither:         true,    // dither anti-banding
+  capaBloom:          true,    // bloom
+  fps:                true,    // mostrar FPS
 
   // qué parámetros entran al botón RANDOM
   random: {
@@ -58,7 +58,7 @@ window.CONFIG = {
     cercania:         false,
     tamanoAzar:       true,
     vistaCamara:      false,
-    luzGeneral:       true,
+    luzGeneral:       false,
     colorLuz:         false,
     bpm:              false,
     estroboVel:       false,

@@ -49,9 +49,9 @@ window.CONFIG = {
   sacudir:            true,    // sacudir el teléfono dispara un RANDOM
   capaNiebla:         true,    // niebla atmosférica (INSIDE)
   capaGrade:          true,    // grade frío/apagado (INSIDE)
-  capaDither:         true,    // dither anti-banding
-  capaBloom:          true,    // bloom
-  fps:                true,    // mostrar FPS
+  capaDither:         false,    // dither anti-banding
+  capaBloom:          false,    // bloom
+  fps:                false,    // mostrar FPS
 
   // qué parámetros entran al botón RANDOM
   random: {

@@ -35,7 +35,7 @@ window.CONFIG = {
   luzBase:            33,    // luz entre destellos (0 = negro)
 
   // modo
-  estrobo:            false,    // arrancar en modo estrobo
+  estrobo:            false,    // arrancar en modo estrobo (off = sin parpadeo)
   sonido:             false,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
   autoRandom:         false,    // re-roll automático cada cierto tiempo

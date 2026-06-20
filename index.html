@@ -874,7 +874,7 @@ function tick(now){
   // NO iluminan los cuerpos (intensidad 0); solo pintan el fondo (domo) en negativo.
   key.color.setHex(strobeColor);
   discoLights.forEach(l => l.intensity = 0);
-  const kb = neg ? KEY_BOOST : 1;
+  const kb = neg ? 1 : 1.6;   // en positivo (fondo negro) más luz para que los cuerpos se vean
   let domeInten;
   if (strobeOn){
     strobeClock += dt * strobeHz;
@@ -887,7 +887,7 @@ function tick(now){
   } else {
     // modo normal = direccional estática + hemi (sin parpadeo ni luces voladoras), bien visible
     key.intensity = KEY_NORMAL * amt * kb;
-    domeInten = (0.65 + 0.5 * beatPulse) * amt;
+    domeInten = 0.9 * amt;   // fondo (domo) FIJO, sin pulso de beat
   }
 
   // background: negro en + / domo de color en − (la niebla solo tiñe la fog, ver setBg)

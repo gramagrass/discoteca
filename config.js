@@ -22,6 +22,8 @@ window.CONFIG = {
 
   // disposición: aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral
   formacion:         "aleatorio",
+  // familia de movimiento activa: todas | dance | locomotion | expression | idle
+  familia:           "todas",
 
   estrobo:           true,       // arrancar en modo estrobo
   sonido:            false,      // arrancar con sonido (suena al primer clic)

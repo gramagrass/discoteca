@@ -1,0 +1,6 @@
+# carpeta local: herramientas y descargas que NO van al sitio (disco.grama.co)
+_local/
+
+# basura del sistema / dependencias
+.DS_Store
+node_modules/

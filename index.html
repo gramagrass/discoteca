@@ -120,6 +120,16 @@
       <input id="s-count" type="range" min="1" max="30" step="1" value="16">
     </div>
     <div class="ctl">
+      <label>familia de movimiento</label>
+      <select id="s-fam">
+        <option value="todas">todas</option>
+        <option value="dance">baile</option>
+        <option value="locomotion">locomoción</option>
+        <option value="expression">expresión</option>
+        <option value="idle">idle</option>
+      </select>
+    </div>
+    <div class="ctl">
       <label>coreografía <span class="val" id="v-choreo">100</span></label>
       <input id="s-choreo" type="range" min="0" max="1" step="0.01" value="1">
     </div>
@@ -214,7 +224,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
     <button id="grid">piso</button>
 
     <div class="foot">
-      <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> bailes · mocap real</span>
+      <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> movimientos · mocap real</span>
       <span><kbd>R</kbd> tirar dados · <kbd>espacio</kbd> nuevo reparto · <kbd>E</kbd> estrobo · <kbd>S</kbd> sonido</span>
       <span><kbd>C</kbd> cámara · <kbd>F</kbd> formación · <kbd>T</kbd> tamaño · <kbd>H</kbd> panel · <kbd>P</kbd> pantalla completa</span>
     </div>
@@ -222,6 +232,8 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
 </div>
 
 <!-- estado inicial editable; si falta, se usan los valores por defecto -->
+<script src="models.js"></script>
+<script src="motions.js"></script>
 <script src="config.js"></script>
 
 <script type="importmap">
@@ -252,6 +264,7 @@ const DEFAULTS = {
   vistaCamara: 'sobrevuelo', camVelocidad: 40,  // modo de cámara + velocidad
   cambioBaile: 0,                               // frecuencia de cambio de baile por modelo
   formacion: 'aleatorio',                       // disposición espacial
+  familia: 'todas',                             // familia de movimiento activa: todas|dance|locomotion|expression|idle
   movimiento: 5,                                // velocidad del baile 0–100 (50 = normal → aquí 0.1×)
   noise: 10,                                    // ruido de película 0–100 (0 = off)
   autoRandom: false,                            // re-rollear solo cada cierto tiempo
@@ -279,21 +292,20 @@ let noise        = cfg.noise / 100;             // 0 = off · 1 = ruido fuerte
 let autoRandom   = !!cfg.autoRandom;            // re-roll automático cada cierto tiempo
 let autoRandomSec = cfg.autoRandomSeg;          // intervalo base (s)
 let nextAuto     = 0;                           // momento del próximo auto-random
+let activeFamily = cfg.familia || 'todas';      // pool de movimientos: todas|dance|idle|locomotion|expression
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
 const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
 
-// ---------------------------------------------------------------- asset urls (locales: obra autónoma; servidos desde ./assets)
-const BODY_URLS = [
-  './assets/bodies/Masculine.glb',
-  './assets/bodies/Feminine.glb',
-];
-const DANCE_NAMES = [
-  'M_Dances_001','M_Dances_002','M_Dances_003','M_Dances_004','M_Dances_005',
-  'M_Dances_006','M_Dances_007','M_Dances_008','M_Dances_009','M_Dances_011',
-  'F_Dances_001','F_Dances_004','F_Dances_005','F_Dances_006','F_Dances_007',
-];
-const DANCE_URLS = DANCE_NAMES.map(n => './assets/dances/' + n + '.glb');
+// ---------------------------------------------------------------- asset urls (locales; servidos desde ./assets)
+const MODELS = window.MODELS || ['Masculine', 'Feminine'];
+const BODY_URLS = MODELS.map(n => `./assets/bodies/${n}.glb`);
+// movimientos por familia, desde el manifiesto motions.js (dance/idle/locomotion/expression)
+const MOTIONS = window.MOTIONS || { dance: [], idle: [], locomotion: [], expression: [] };
+const MOTION_ENTRIES = [];
+for (const fam of Object.keys(MOTIONS))
+  for (const name of MOTIONS[fam])
+    MOTION_ENTRIES.push({ fam, name, url: `./assets/motions/${fam}/${name}.glb` });
 
 // ---------------------------------------------------------------- renderer / scene
 const renderer = new THREE.WebGLRenderer({ antialias:true });
@@ -436,16 +448,31 @@ function clampColor(hex){
 }
 
 let bodies = [];   // [{scene}]
-let clips  = [];   // [AnimationClip]
+let allClips = []; // [{clip, family}]
 let crowd  = [];   // [{root, mixer, action}]
+
+// pin the root's horizontal translation so locomotion plays IN PLACE (no drifting away)
+function neutralizeRoot(clip){
+  for (const t of clip.tracks){
+    if (t.name.endsWith('.position')){
+      const v = t.values, x0 = v[0], z0 = v[2];
+      for (let i = 0; i < v.length; i += 3){ v[i] = x0; v[i + 2] = z0; }   // keep Y (v[i+1])
+    }
+  }
+}
+// clips of the currently selected family (or all)
+function activePool(){
+  const p = activeFamily === 'todas' ? allClips : allClips.filter(c => c.family === activeFamily);
+  return p.length ? p : allClips;
+}
 let bodyMat;       // shared body material (clay ↔ dark translucent, driven by luz general)
 let bodyCenterY = 0.84;     // vertical centre of a body (measured after load)
 let lookY = 1.0;            // camera focus height = the shared mid-plane
 
 async function loadAssets(){
-  const [bodyGltfs, danceGltfs] = await Promise.all([
+  const [bodyGltfs, motionGltfs] = await Promise.all([
     Promise.all(BODY_URLS.map(load)),
-    Promise.all(DANCE_URLS.map(load)),
+    Promise.all(MOTION_ENTRIES.map(e => load(e.url))),
   ]);
   // override every body material with a uniform matte greyscale "clay" surface —
   // no skin/clothes colour, so form reads purely through light & shadow.
@@ -462,7 +489,10 @@ async function loadAssets(){
   const box = new THREE.Box3().setFromObject(bodies[0]);
   const cy = (box.min.y + box.max.y) / 2;
   if (isFinite(cy) && cy > 0.1){ bodyCenterY = cy; lookY = cy; }
-  clips = danceGltfs.map((g, i) => { const c = g.animations[0]; c.name = DANCE_NAMES[i]; return c; });
+  allClips = motionGltfs.map((g, i) => {
+    const c = g.animations[0]; c.name = MOTION_ENTRIES[i].name; neutralizeRoot(c);
+    return { clip: c, family: MOTION_ENTRIES[i].fam };
+  });
 }
 
 // ---------------------------------------------------------------- crowd
@@ -567,12 +597,13 @@ function setModelDance(c, clip, phaseMul = 1, scatterMul = 1){
   c.action = action;
 }
 
-// reparte bailes a todos; 'choreo' controla unísono ↔ variedad
+// reparte movimientos a todos desde la familia activa; 'choreo' controla unísono ↔ variedad
 function assignDances(){
-  const lead = ri(clips);
+  const pool = activePool();
+  const lead = ri(pool).clip;
   for (const c of crowd){
     const unique = Math.random() < choreo;
-    setModelDance(c, unique ? ri(clips) : lead, unique ? 1 : choreo, choreo);
+    setModelDance(c, unique ? ri(pool).clip : lead, unique ? 1 : choreo, choreo);
   }
 }
 
@@ -716,10 +747,11 @@ function tick(now){
   for (const c of crowd) c.mixer.update(dt * animSpeed);   // velocidad global del baile
 
   // cambio de baile espontáneo por modelo (proceso probabilístico → tiempos dispares)
-  if (danceChange > 0 && clips.length){
+  if (danceChange > 0 && allClips.length){
     const ratePerSec = danceChange * 0.5;          // máx ~1 cambio cada ~2 s por modelo
+    const pool = activePool();
     for (const c of crowd){
-      if (Math.random() < ratePerSec * c.root.userData.seed.rate * dt) setModelDance(c, ri(clips));
+      if (Math.random() < ratePerSec * c.root.userData.seed.rate * dt) setModelDance(c, ri(pool).clip);
     }
   }
 
@@ -832,6 +864,7 @@ $('s-base').oninput   = e => { baseLight = +e.target.value; $('v-base').textCont
 $('s-choreo').oninput = e => { choreo = +e.target.value; $('v-choreo').textContent = Math.round(choreo*100); assignDances(); };
 $('s-dchg').oninput  = e => { danceChange = +e.target.value; $('v-dchg').textContent = Math.round(danceChange*100); };
 $('s-form').onchange = e => { formation = e.target.value; applyLayout(); };
+$('s-fam').onchange  = e => { activeFamily = e.target.value; assignDances(); };
 $('s-cam').onchange  = e => { camMode = e.target.value; cam.fly = null; cam.tvEnd = 0; };
 $('s-camvel').oninput = e => { camSpeed = +e.target.value; $('v-camvel').textContent = Math.round(camSpeed*100); };
 $('s-noise').oninput = e => { noise = +e.target.value; $('v-noise').textContent = Math.round(noise*100); applyNoise(); };
@@ -888,6 +921,7 @@ function syncUI(){
   { const el = $('s-auto'); if (el) el.checked = autoRandom; }
   set('s-autosec', autoRandomSec); $('v-autosec').textContent = autoRandomSec;
   set('s-form', formation);
+  set('s-fam', activeFamily);
   set('s-cam', camMode);
   set('s-camvel', camSpeed); $('v-camvel').textContent = Math.round(camSpeed*100);
   set('s-noise', noise); $('v-noise').textContent = Math.round(noise*100);
@@ -897,7 +931,7 @@ addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended'
 
 // ---------------------------------------------------------------- boot
 loadAssets().then(() => {
-  $('m-dances').textContent = clips.length;
+  $('m-dances').textContent = allClips.length;
   randomizeAll();             // siempre arranca con una composición aleatoria (dado inicial)
   applyNoise();
   if (cfg.piso){ grid.visible = true; floor.visible = true; }

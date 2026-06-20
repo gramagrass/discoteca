@@ -1,8 +1,12 @@
 /* ───────────────────────────────────────────────────────────────
    personajes (cuerpos) a cargar — nombres de archivo en assets/bodies/ sin .glb
-   Todos deben compartir el MISMO esqueleto que los movimientos (motions.js).
+   Todos comparten el rig de Mixamo/RPM (la obra normaliza altura y orientación).
    Para sumar uno: dejá el .glb en assets/bodies/ y agregá su nombre acá.
    ─────────────────────────────────────────────────────────────── */
-window.MODELS = ["Masculine", "Feminine", "Xbot", "Soldier", "Michelle"];
-// Xbot/Soldier/Michelle son de Mixamo (rig mixamorig); la obra les renombra los huesos
-// al rig RPM en la carga, así los movimientos les aplican igual.
+window.MODELS = [
+  "Masculine", "Feminine",
+  "Ch01", "Ch02", "Ch13", "Ch16", "Ch17", "Ch22",
+  "Ch26", "Ch27", "Ch37", "Ch38", "Ch49"
+];
+// Ch## son personajes de Mixamo (FBX con skin) convertidos a GLB: huesos renombrados al
+// rig base, texturas descartadas (la obra los pinta gris clay). 13 cuerpos en total.

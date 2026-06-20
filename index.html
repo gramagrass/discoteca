@@ -797,10 +797,13 @@ const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 // magnitude = how much light; sign = bodies-lit (+) vs background-lit (−).
 function setBg(hex){
   bgColor.setHex(hex);
-  // con niebla: la fog tira hacia un gris "bruma" (su brillo es ajustable) → da profundidad
-  // incluso sobre fondo negro; sin niebla: la fog sigue el color del fondo (apenas se nota)
-  if (lNiebla) scene.fog.color.setRGB(hazeBri * 0.86, hazeBri * 0.92, hazeBri * 1.0);
-  else scene.fog.color.setHex(hex);
+  // niebla acoplada a la luz general: en positivo (fondo negro) la bruma tira a OSCURO;
+  // en negativo se aclara incrementalmente con |luz general| (máx en −100). brumaBrillo = techo.
+  if (lNiebla){
+    const an = masterBright < 0 ? -masterBright : 0;        // 0 en positivo, 0..1 en negativo
+    const b = hazeBri * (0.03 + 0.97 * an);
+    scene.fog.color.setRGB(b * 0.86, b * 0.92, b * 1.0);
+  } else scene.fog.color.setHex(hex);
 }
 function applyBodyLook(){
   if (!bodyMat) return;
@@ -816,16 +819,14 @@ function applyBodyLook(){
 const KEY_BOOST = 1.0;   // material claro → sin refuerzo (luz igual que en positivo)
 function refreshStatic(){
   const amt = Math.abs(masterBright);
-  const kb = masterBright < 0 ? KEY_BOOST : 1.0;
-  hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;
-  if (!strobeOn) key.intensity = KEY_DISCO * amt * kb;
+  hemi.intensity = STROBE_HEMI * amt;   // ambiente bajo (alto contraste, como la pausa del estrobo); key se setea en tick
 }
 function setStrobe(on){
   strobeOn = on;
   scene.background.set(on ? 0x000000 : 0x050507);
   scene.fog.color.set(on ? 0x000000 : 0x050507);
-  key.color.set(on ? strobeColor : 0xbfc6ff);
-  refreshStatic();   // disco-light intensities are driven per-frame in tick()
+  key.color.set(strobeColor);   // la direccional usa el color elegido en ambos modos
+  refreshStatic();
   $('strobe').textContent = 'estrobo: ' + (on ? 'on' : 'off');
   $('strobe').classList.toggle('primary', on);
 }
@@ -868,8 +869,11 @@ function tick(now){
     l.position.set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
   });
 
-  // BODIES are lit identically whether luz general is + or − (same key/hemi/disco).
-  // The only difference in − is: dark material (handled) + a colour-lit background (dome).
+  // Luz de los cuerpos = key direccional (color elegido) + hemi tenue. Las luces voladoras
+  // NO iluminan los cuerpos (intensidad 0); solo pintan el fondo (domo) en negativo.
+  key.color.setHex(strobeColor);
+  discoLights.forEach(l => l.intensity = 0);
+  const kb = neg ? KEY_BOOST : 1;
   let domeInten;
   if (strobeOn){
     strobeClock += dt * strobeHz;
@@ -877,11 +881,11 @@ function tick(now){
     const fid = Math.floor(strobeClock);
     if (fid !== flashId){ flashId = fid; flashAmp = rf(0.55, 1.0); }
     const flash = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * amt;
-    key.intensity = flash * (neg ? KEY_BOOST : 1);        // los cuerpos oscuros también destellan con cuerpo
-    discoLights.forEach(l => l.intensity = 0);            // sin luces de color durante estrobo
-    domeInten = flash;                                    // el fondo destella con los cuerpos
+    key.intensity = flash * kb;                            // destellos
+    domeInten = flash;
   } else {
-    discoLights.forEach(l => l.intensity = l.userData.base * l.userData.mult * (0.6 + 0.55 * beatPulse) * amt);
+    // modo normal = el ambiente estático de la pausa del estrobo (key + hemi, sin parpadeo)
+    key.intensity = baseLight * amt * kb;
     domeInten = (0.65 + 0.5 * beatPulse) * amt;
   }
 

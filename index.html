@@ -169,8 +169,8 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
 
     <div class="sec">efecto</div>
     <div class="ctl">
-      <label>noise <span class="val" id="v-noise">50</span></label>
-      <input id="s-noise" type="range" min="0" max="1" step="0.01" value="0.50">
+      <label>noise <span class="val" id="v-noise">10</span></label>
+      <input id="s-noise" type="range" min="0" max="1" step="0.01" value="0.10">
     </div>
 
     <div class="sec">luz / estrobo</div>
@@ -242,7 +242,7 @@ const DEFAULTS = {
   cambioBaile: 0,                               // frecuencia de cambio de baile por modelo
   formacion: 'aleatorio',                       // disposición espacial
   movimiento: 50,                               // velocidad del baile 0–100 (50 = normal, 100 = 2×)
-  noise: 50,                                    // ruido de película 0–100 (0 = off)
+  noise: 10,                                    // ruido de película 0–100 (0 = off)
 };
 const cfg = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 

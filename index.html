@@ -104,11 +104,18 @@
     font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px;
     color:var(--ink); background:rgba(5,5,7,0.5); padding:3px 8px; border:1px solid var(--line); border-radius:3px;
   }
+  #panelBtn{
+    position:fixed; top:12px; right:12px; z-index:11; width:38px; height:38px;
+    font-size:16px; color:var(--ink); background:rgba(5,5,7,0.55); backdrop-filter:blur(8px);
+    border:1px solid var(--line); border-radius:6px; cursor:pointer; line-height:1;
+  }
+  #panelBtn:hover{ border-color:var(--ink); }
 </style>
 </head>
 <body>
 <div id="loader">cargando cuerpos y bailes…</div>
 <div id="fps">—</div>
+<button id="panelBtn" title="panel (H)">☰</button>
 
 <div id="ui">
   <div id="dock" class="panel">
@@ -323,6 +330,8 @@ let activeFamily = cfg.familia || 'todas';      // pool de movimientos: todas|da
 // capas de render (INSIDE) — cada una con su interruptor, default off
 let lNiebla = !!cfg.capaNiebla, lGrade = !!cfg.capaGrade, lDither = !!cfg.capaDither, lBloom = !!cfg.capaBloom;
 let showFps = !!cfg.fps;
+let panelVisible = isMobile ? false : (cfg.panel !== undefined ? !!cfg.panel : true);   // móvil: oculto siempre (botón ☰); escritorio: config
+const SHAKE = (cfg.sacudir ?? true);   // sacudir el teléfono = nuevo RANDOM
 let nieblaDens  = (cfg.nieblaDens  ?? 50) / 100;   // densidad de niebla
 let hazeBri     = (cfg.brumaBrillo ?? 40) / 100;   // brillo del gris "bruma" (0 = oscuro → atmósfera en negro)
 let bloomFuerza = (cfg.bloomFuerza ?? 50) / 100;   // fuerza del bloom
@@ -345,8 +354,9 @@ for (const fam of Object.keys(MOTIONS))
     MOTION_ENTRIES.push({ fam, name, url: `./assets/motions/${fam}/${name}.glb` });
 
 // ---------------------------------------------------------------- renderer / scene
+const isMobile = matchMedia('(pointer: coarse)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));   // móvil: cap más bajo (rendimiento)
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -981,6 +991,8 @@ $('sound').onclick = () => {
 };
 
 const ui = document.getElementById('ui');
+if (!panelVisible) ui.classList.add('hidden');            // móvil / config: panel oculto al inicio
+$('panelBtn').onclick = () => ui.classList.toggle('hidden');
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (k === 'r'){ e.preventDefault(); randomizeAll(); }            // tirar dados
@@ -1039,8 +1051,30 @@ function syncUI(){
   set('s-gradei', gradeInt);   $('v-gradei').textContent = Math.round(gradeInt*100);
   if (fpsEl) fpsEl.style.display = showFps ? 'block' : 'none';
 }
-// resume audio on first user gesture (browsers block autoplay until then)
-addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended') audio.resume(); });
+// ---- sacudir el teléfono → nuevo RANDOM ----
+let lastShake = 0, lastAcc = null, motionArmed = false;
+function onMotion(e){
+  const a = e.accelerationIncludingGravity; if (!a) return;
+  if (lastAcc){
+    const dx = a.x - lastAcc.x, dy = a.y - lastAcc.y, dz = a.z - lastAcc.z;
+    const mag = Math.sqrt(dx*dx + dy*dy + dz*dz), now = performance.now();
+    if (mag > 24 && now - lastShake > 1200){ lastShake = now; randomizeAll(); }
+  }
+  lastAcc = { x:a.x, y:a.y, z:a.z };
+}
+function armMotion(){
+  if (motionArmed || !SHAKE) return; motionArmed = true;
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
+    DeviceMotionEvent.requestPermission().then(s => { if (s === 'granted') addEventListener('devicemotion', onMotion); }).catch(() => {});
+  } else {
+    addEventListener('devicemotion', onMotion);
+  }
+}
+// resume audio + armar el sensor de movimiento en el primer toque (iOS exige gesto)
+addEventListener('pointerdown', () => {
+  if (audio && audio.state === 'suspended') audio.resume();
+  armMotion();
+});
 
 // ---------------------------------------------------------------- boot
 loadAssets().then(() => {

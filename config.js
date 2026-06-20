@@ -48,6 +48,8 @@ window.CONFIG = {
   brumaBrillo:        40,      // brillo del gris bruma 0–100 (0 = oscuro → atmósfera en negro)
   bloomFuerza:        50,      // fuerza del bloom 0–100
   gradeInt:           100,     // intensidad del grade 0–100
+  panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto; botón ☰)
+  sacudir:            true,    // sacudir el teléfono = nuevo RANDOM
 
   // qué parámetros entran al botón RANDOM
   random: {

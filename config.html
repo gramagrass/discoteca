@@ -141,6 +141,7 @@ const DEFAULTS = {
   estrobo:true, sonido:false, piso:false, autoRandom:false, autoRandomSeg:10,
   capaNiebla:false, capaGrade:false, capaDither:false, capaBloom:false, fps:false,
   nieblaDens:50, brumaBrillo:40, bloomFuerza:50, gradeInt:100,
+  panel:true, sacudir:true,
 };
 const cur = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 
@@ -187,6 +188,8 @@ const SECTIONS = [
     ['sonido','sonido','bool',0,0,'arrancar con sonido (suena al primer clic)'],
     ['piso','piso','bool',0,0,'mostrar piso/rejilla'],
     ['autoRandom','auto random','bool',0,0,'re-roll automático cada cierto tiempo'],
+    ['panel','panel visible','bool',0,0,'mostrar el panel en escritorio (en móvil siempre oculto)'],
+    ['sacudir','sacudir = random','bool',0,0,'sacudir el teléfono dispara un RANDOM'],
     ['capaNiebla','capa: niebla','bool',0,0,'niebla atmosférica (INSIDE)'],
     ['capaGrade','capa: grade','bool',0,0,'grade frío/apagado (INSIDE)'],
     ['capaDither','capa: dither','bool',0,0,'dither anti-banding'],

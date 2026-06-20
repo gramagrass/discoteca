@@ -330,6 +330,7 @@ let activeFamily = cfg.familia || 'todas';      // pool de movimientos: todas|da
 // capas de render (INSIDE) — cada una con su interruptor, default off
 let lNiebla = !!cfg.capaNiebla, lGrade = !!cfg.capaGrade, lDither = !!cfg.capaDither, lBloom = !!cfg.capaBloom;
 let showFps = !!cfg.fps;
+const isMobile = matchMedia('(pointer: coarse)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 let panelVisible = isMobile ? false : (cfg.panel !== undefined ? !!cfg.panel : true);   // móvil: oculto siempre (botón ☰); escritorio: config
 const SHAKE = (cfg.sacudir ?? true);   // sacudir el teléfono = nuevo RANDOM
 let nieblaDens  = (cfg.nieblaDens  ?? 50) / 100;   // densidad de niebla
@@ -354,7 +355,6 @@ for (const fam of Object.keys(MOTIONS))
     MOTION_ENTRIES.push({ fam, name, url: `./assets/motions/${fam}/${name}.glb` });
 
 // ---------------------------------------------------------------- renderer / scene
-const isMobile = matchMedia('(pointer: coarse)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));   // móvil: cap más bajo (rendimiento)
 renderer.setSize(innerWidth, innerHeight);

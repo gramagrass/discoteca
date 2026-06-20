@@ -134,13 +134,7 @@
     </div>
     <div class="ctl">
       <label>familia de movimiento</label>
-      <select id="s-fam">
-        <option value="todas">todas</option>
-        <option value="dance">baile</option>
-        <option value="locomotion">locomoción</option>
-        <option value="expression">expresión</option>
-        <option value="idle">idle</option>
-      </select>
+      <select id="s-fam"></select>
     </div>
     <div class="ctl">
       <label>coreografía <span class="val" id="v-choreo">100</span></label>
@@ -689,7 +683,7 @@ function assignDances(){
 // generador aleatorio por parámetro (cada uno setea su variable)
 const RANDOMIZERS = {
   cuerpos:           () => { COUNT = 6 + (Math.random() * 25 | 0); },
-  familia:           () => { activeFamily = ri(['todas','dance','locomotion','expression','idle']); },
+  familia:           () => { activeFamily = ri(['todas', ...Object.keys(MOTIONS)]); },
   coreografia:       () => { choreo = Math.random(); },
   cambioBaile:       () => { danceChange = Math.random() * 0.6; },
   movimiento:        () => { animSpeed = Math.random() * 2; },
@@ -951,6 +945,15 @@ function tick(now){
 
 // ---------------------------------------------------------------- UI wiring
 const $ = id => document.getElementById(id);
+// selector de familia dinámico (se arma desde el manifiesto motions.js)
+const FAM_LABELS = { todas:'todas', dance:'baile', locomotion:'locomoción', expression:'expresión', idle:'idle', fisico:'físico' };
+(function buildFamilySelect(){
+  const sel = $('s-fam'); if (!sel) return;
+  sel.innerHTML = '';
+  for (const k of ['todas', ...Object.keys(MOTIONS)]){
+    const o = document.createElement('option'); o.value = k; o.textContent = FAM_LABELS[k] || k; sel.appendChild(o);
+  }
+})();
 $('reroll').onclick = randomizeAll;       // RANDOM: nueva composición
 $('s-auto').onchange = e => { autoRandom = e.target.checked; if (autoRandom) scheduleAuto(performance.now()); };
 $('s-autosec').oninput = e => { autoRandomSec = +e.target.value; $('v-autosec').textContent = autoRandomSec; if (autoRandom) scheduleAuto(performance.now()); };

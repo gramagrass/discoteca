@@ -519,12 +519,10 @@ let crowd  = [];   // [{root, mixer, action}]
 
 // pin the root's horizontal translation so locomotion plays IN PLACE (no drifting away)
 function neutralizeRoot(clip){
-  for (const t of clip.tracks){
-    if (t.name.endsWith('.position')){
-      const v = t.values, x0 = v[0], z0 = v[2];
-      for (let i = 0; i < v.length; i += 3){ v[i] = x0; v[i + 2] = z0; }   // keep Y (v[i+1])
-    }
-  }
+  // quitar las pistas de POSICIÓN (solo la cadera las tiene): así el clip únicamente ROTA
+  // los huesos y cada cuerpo se queda parado a su altura natural (bind), sin importar si
+  // el clip viene en cm (Mixamo ~124) o m (RPM ~1). Movimiento en el sitio, sin deriva.
+  clip.tracks = clip.tracks.filter(t => !t.name.endsWith('.position'));
 }
 // clips of the currently selected family (or all)
 function activePool(){
@@ -553,8 +551,24 @@ async function loadAssets(){
     return g.scene;
   });
   applyBodyLook();
-  // measure a body so we can centre every figure on one shared horizontal plane,
-  // regardless of its scale (so a giant and a hand-sized one share a mid-line).
+  // Normalizar TODOS los cuerpos a una misma altura, parados, pies en y=0 y centrados en XZ.
+  // Así modelos de distinta escala/orientación (RPM en metros, Mixamo en cm con raíz rotada…)
+  // conviven sin pelear con las transformaciones de la obra.
+  bodies[0].updateMatrixWorld(true);
+  const TARGET_H = new THREE.Box3().setFromObject(bodies[0]).getSize(new THREE.Vector3()).y || 1.7;
+  for (const b of bodies){
+    b.updateMatrixWorld(true);
+    let bb = new THREE.Box3().setFromObject(b);
+    const h = bb.max.y - bb.min.y;
+    if (isFinite(h) && h > 0.001) b.scale.multiplyScalar(TARGET_H / h);   // misma altura para todos
+    b.updateMatrixWorld(true);
+    bb = new THREE.Box3().setFromObject(b);
+    b.position.x -= (bb.min.x + bb.max.x) / 2;   // centrar X
+    b.position.z -= (bb.min.z + bb.max.z) / 2;   // centrar Z
+    b.position.y -= bb.min.y;                     // pies en y=0
+    b.updateMatrixWorld(true);
+  }
+  // medir para centrar cada figura en un plano horizontal compartido
   const box = new THREE.Box3().setFromObject(bodies[0]);
   const cy = (box.min.y + box.max.y) / 2;
   if (isFinite(cy) && cy > 0.1){ bodyCenterY = cy; lookY = cy; }
@@ -573,7 +587,11 @@ function clearCrowd(){
 function placeCrowd(n){
   clearCrowd();
   for (let i = 0; i < n; i++){
-    const root = cloneSkinned(ri(bodies));
+    // envolver el cuerpo en un grupo: la obra escala/orienta el GRUPO (root) y así no pisa
+    // la escala/rotación natural del modelo (clave para los cuerpos de Mixamo).
+    const body = cloneSkinned(ri(bodies));
+    const root = new THREE.Group();
+    root.add(body);
     // stable per-figure seeds so moving a slider rearranges smoothly, not randomly
     root.userData.seed = {
       r:     Math.sqrt(Math.random()),   // uniform fill of a disc

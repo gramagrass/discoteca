@@ -31,6 +31,13 @@ window.CONFIG = {
   autoRandom:        false,      // re-rollear solo cada cierto tiempo (para dejarlo corriendo)
   autoRandomSeg:     10,         // intervalo del auto-random en segundos (1–60)
 
+  // capas de render (look INSIDE) — cada una se prende/apaga por separado
+  capaNiebla:        false,      // niebla atmosférica (densidad alta)
+  capaGrade:         false,      // grade frío/apagado
+  capaDither:        false,      // dither anti-banding
+  capaBloom:         false,      // bloom
+  fps:               false,      // mostrar medidor de FPS
+
   // cámara — lee los valores en vivo en el panel ("cámara") y cópialos aquí
   camAngulo:         293,        // ángulo horizontal en grados
   camAltura:         2,          // altura de la cámara en grados

@@ -99,10 +99,16 @@
     font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px; letter-spacing:0.1em;
     transition:opacity .5s ease;
   }
+  #fps{
+    position:fixed; top:14px; left:16px; z-index:9; display:none;
+    font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px;
+    color:var(--ink); background:rgba(5,5,7,0.5); padding:3px 8px; border:1px solid var(--line); border-radius:3px;
+  }
 </style>
 </head>
 <body>
 <div id="loader">cargando cuerpos y bailes…</div>
+<div id="fps">—</div>
 
 <div id="ui">
   <div id="dock" class="panel">
@@ -194,6 +200,13 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <input id="s-noise" type="range" min="0" max="1" step="0.01" value="0.10">
     </div>
 
+    <div class="sec">render · capas (INSIDE)</div>
+    <label class="chk"><input type="checkbox" id="l-niebla"> niebla atmosférica</label>
+    <label class="chk"><input type="checkbox" id="l-grade"> grade frío/apagado</label>
+    <label class="chk"><input type="checkbox" id="l-dither"> dither anti-banding</label>
+    <label class="chk"><input type="checkbox" id="l-bloom"> bloom</label>
+    <label class="chk"><input type="checkbox" id="l-fps"> mostrar FPS</label>
+
     <div class="sec">luz / estrobo</div>
     <div class="ctl">
       <label>luz general <span class="val" id="v-bright">100</span></label>
@@ -250,6 +263,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const TAU = Math.PI * 2;
@@ -293,6 +307,9 @@ let autoRandom   = !!cfg.autoRandom;            // re-roll automático cada cier
 let autoRandomSec = cfg.autoRandomSeg;          // intervalo base (s)
 let nextAuto     = 0;                           // momento del próximo auto-random
 let activeFamily = cfg.familia || 'todas';      // pool de movimientos: todas|dance|idle|locomotion|expression
+// capas de render (INSIDE) — cada una con su interruptor, default off
+let lNiebla = !!cfg.capaNiebla, lGrade = !!cfg.capaGrade, lDither = !!cfg.capaDither, lBloom = !!cfg.capaBloom;
+let showFps = !!cfg.fps;
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
 const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
@@ -320,37 +337,58 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050507);
-scene.fog = new THREE.FogExp2(0x050507, 0.035);
+const FOG_BASE = 0.035, FOG_HAZE = 0.075;   // capa "niebla atmosférica" sube la densidad
+scene.fog = new THREE.FogExp2(0x050507, FOG_BASE);
 
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
 
-// ---------------------------------------------------------------- post: film noise (only grain)
-const NoiseShader = {
+// ---------------------------------------------------------------- post: grade + dither + grain (un solo pase)
+const GradeShader = {
   uniforms: {
     tDiffuse:    { value: null },
     uTime:       { value: 0 },
     uResolution: { value: new THREE.Vector2(innerWidth, innerHeight) },
-    uAmount:     { value: 0.5 },
+    uAmount:     { value: 0.5 },   // grano
+    uGrade:      { value: 0 },     // capa grade frío/apagado (INSIDE)
+    uDither:     { value: 0 },     // capa dither anti-banding
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount;
+    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount; uniform float uGrade; uniform float uDither;
     varying vec2 vUv;
     void main(){
       vec3 col = texture2D(tDiffuse, vUv).rgb;
+      if (uGrade > 0.5){                          // paleta apagada y fría tipo INSIDE
+        float l = dot(col, vec3(0.299, 0.587, 0.114));
+        col = mix(col, vec3(l), 0.35);            // desaturar
+        col *= vec3(0.90, 0.97, 1.08);            // tinte frío
+        col = (col - 0.5) * 1.06 + 0.5;           // contraste suave
+        col = clamp(col, 0.0, 1.0);
+      }
       float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
-      col += (g - 0.5) * 0.14 * uAmount;   // ruido animado
+      col += (g - 0.5) * 0.14 * uAmount;          // grano
+      if (uDither > 0.5){                         // dither fino anti-banding
+        float d = fract(sin(dot(vUv * uResolution + uTime * 0.5, vec2(39.346, 11.135))) * 24634.633);
+        col += (d - 0.5) * (2.0 / 255.0);
+      }
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const noisePass = new ShaderPass(NoiseShader);
-composer.addPass(noisePass);
-composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final, conserva el look
-function applyNoise(){
-  noisePass.enabled = noise > 0.001;
-  noisePass.uniforms.uAmount.value = noise;
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.6, 0.4, 0.82);  // capa bloom
+bloomPass.enabled = false;
+composer.addPass(bloomPass);
+const gradePass = new ShaderPass(GradeShader);
+composer.addPass(gradePass);
+composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final
+function updatePost(){
+  gradePass.uniforms.uAmount.value = noise;
+  gradePass.uniforms.uGrade.value  = lGrade ? 1 : 0;
+  gradePass.uniforms.uDither.value = lDither ? 1 : 0;
+  gradePass.enabled = (noise > 0.001) || lGrade || lDither;
+  bloomPass.enabled = lBloom;
+  scene.fog.density = lNiebla ? FOG_HAZE : FOG_BASE;
 }
 
 // ---------------------------------------------------------------- lights
@@ -740,9 +778,13 @@ let prev = performance.now();
 let beatClock = 0;
 let strobeClock = 0;
 let lastReadout = 0;
+let fpsT = 0, fpsFrames = 0;
+const fpsEl = document.getElementById('fps');
 let flashId = -1, flashAmp = 1;
 function tick(now){
   const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
+  fpsFrames++;
+  if (now - fpsT > 500){ if (showFps) fpsEl.textContent = Math.round(fpsFrames * 1000 / (now - fpsT)) + ' fps'; fpsFrames = 0; fpsT = now; }
   beatClock += dt * (BPM / 60);
   const beatPulse = Math.pow(0.5 - 0.5 * Math.cos(beatClock * TAU), 1.25);
 
@@ -839,7 +881,7 @@ function tick(now){
   }
 
   scheduleAudio();
-  noisePass.uniforms.uTime.value = now / 1000;
+  gradePass.uniforms.uTime.value = now / 1000;
   composer.render();
   requestAnimationFrame(tick);
 }
@@ -871,7 +913,12 @@ $('s-form').onchange = e => { formation = e.target.value; applyLayout(); };
 $('s-fam').onchange  = e => { activeFamily = e.target.value; assignDances(); };
 $('s-cam').onchange  = e => { camMode = e.target.value; cam.fly = null; cam.tvEnd = 0; };
 $('s-camvel').oninput = e => { camSpeed = +e.target.value; $('v-camvel').textContent = Math.round(camSpeed*100); };
-$('s-noise').oninput = e => { noise = +e.target.value; $('v-noise').textContent = Math.round(noise*100); applyNoise(); };
+$('s-noise').oninput = e => { noise = +e.target.value; $('v-noise').textContent = Math.round(noise*100); updatePost(); };
+$('l-niebla').onchange = e => { lNiebla = e.target.checked; updatePost(); };
+$('l-grade').onchange  = e => { lGrade  = e.target.checked; updatePost(); };
+$('l-dither').onchange = e => { lDither = e.target.checked; updatePost(); };
+$('l-bloom').onchange  = e => { lBloom  = e.target.checked; updatePost(); };
+$('l-fps').onchange    = e => { showFps = e.target.checked; fpsEl.style.display = showFps ? 'block' : 'none'; };
 $('s-mov').oninput = e => { animSpeed = +e.target.value * 2; $('v-mov').textContent = animSpeed.toFixed(1); };
 $('grid').onclick = () => { const v = !grid.visible; grid.visible = v; floor.visible = v; };
 $('sound').onclick = () => {
@@ -903,7 +950,8 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
-  noisePass.uniforms.uResolution.value.set(innerWidth, innerHeight);
+  gradePass.uniforms.uResolution.value.set(innerWidth, innerHeight);
+  bloomPass.setSize(innerWidth, innerHeight);
 });
 
 // push the current values into every control + its readout
@@ -929,6 +977,12 @@ function syncUI(){
   set('s-cam', camMode);
   set('s-camvel', camSpeed); $('v-camvel').textContent = Math.round(camSpeed*100);
   set('s-noise', noise); $('v-noise').textContent = Math.round(noise*100);
+  { const c=$('l-niebla'); if(c) c.checked=lNiebla; }
+  { const c=$('l-grade');  if(c) c.checked=lGrade; }
+  { const c=$('l-dither'); if(c) c.checked=lDither; }
+  { const c=$('l-bloom');  if(c) c.checked=lBloom; }
+  { const c=$('l-fps');    if(c) c.checked=showFps; }
+  if (fpsEl) fpsEl.style.display = showFps ? 'block' : 'none';
 }
 // resume audio on first user gesture (browsers block autoplay until then)
 addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended') audio.resume(); });
@@ -937,7 +991,7 @@ addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended'
 loadAssets().then(() => {
   $('m-dances').textContent = allClips.length;
   randomizeAll();             // siempre arranca con una composición aleatoria (dado inicial)
-  applyNoise();
+  updatePost();
   if (cfg.piso){ grid.visible = true; floor.visible = true; }
   setStrobe(!!cfg.estrobo);    // also sets disco/strobe light levels via refreshStatic
   if (cfg.sonido) $('sound').click();   // begins on first click due to autoplay rules

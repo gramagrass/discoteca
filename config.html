@@ -138,6 +138,7 @@ const DEFAULTS = {
   luzGeneral:98, colorLuz:'#ffffff', bpm:112,
   estroboVel:7.5, estroboIntensidad:1.6, luzBase:33,
   estrobo:true, sonido:false, piso:false, autoRandom:false, autoRandomSeg:10,
+  capaNiebla:false, capaGrade:false, capaDither:false, capaBloom:false, fps:false,
 };
 const cur = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 
@@ -178,6 +179,11 @@ const SECTIONS = [
     ['sonido','sonido','bool',0,0,'arrancar con sonido (suena al primer clic)'],
     ['piso','piso','bool',0,0,'mostrar piso/rejilla'],
     ['autoRandom','auto random','bool',0,0,'re-roll automático cada cierto tiempo'],
+    ['capaNiebla','capa: niebla','bool',0,0,'niebla atmosférica (INSIDE)'],
+    ['capaGrade','capa: grade','bool',0,0,'grade frío/apagado (INSIDE)'],
+    ['capaDither','capa: dither','bool',0,0,'dither anti-banding'],
+    ['capaBloom','capa: bloom','bool',0,0,'bloom'],
+    ['fps','medidor FPS','bool',0,0,'mostrar FPS'],
   ]],
 ];
 

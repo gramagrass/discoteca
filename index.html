@@ -698,7 +698,7 @@ const RANDOMIZERS = {
   cercania:          () => { closeness = Math.random(); },
   tamanoAzar:        () => { sizeVar = Math.random() * 0.5; },
   vistaCamara:       () => { camMode = ri(CAMMODES); cam.fly = null; cam.tvEnd = 0; },
-  luzGeneral:        () => { masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.25, 1.0); },
+  luzGeneral:        () => { masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.5, 1.0); },
   colorLuz:          () => { strobeColor = new THREE.Color().setHSL(Math.random(), rf(0.15, 0.5), rf(0.18, 0.52)).getHex(); },
   bpm:               () => { BPM = 80 + (Math.random() * 50 | 0); },
   estroboVel:        () => { strobeHz = rf(2, 14); },
@@ -817,9 +817,10 @@ function applyBodyLook(){
 // dark bodies reflect less, so in negative the directional (modelling) light is boosted
 // to recover the chiaroscuro; ambient stays low so shadows keep their depth.
 const KEY_BOOST = 1.0;   // material claro → sin refuerzo (luz igual que en positivo)
+const KEY_NORMAL = 0.95;   // intensidad de la direccional en modo normal (reemplaza el relleno de las voladoras)
 function refreshStatic(){
   const amt = Math.abs(masterBright);
-  hemi.intensity = STROBE_HEMI * amt;   // ambiente bajo (alto contraste, como la pausa del estrobo); key se setea en tick
+  hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;   // estrobo: bajo (contraste); normal: relleno visible
 }
 function setStrobe(on){
   strobeOn = on;
@@ -884,8 +885,8 @@ function tick(now){
     key.intensity = flash * kb;                            // destellos
     domeInten = flash;
   } else {
-    // modo normal = el ambiente estático de la pausa del estrobo (key + hemi, sin parpadeo)
-    key.intensity = baseLight * amt * kb;
+    // modo normal = direccional estática + hemi (sin parpadeo ni luces voladoras), bien visible
+    key.intensity = KEY_NORMAL * amt * kb;
     domeInten = (0.65 + 0.5 * beatPulse) * amt;
   }
 

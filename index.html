@@ -584,15 +584,19 @@ function applyLayout(){
   });
 }
 
-// give one body a new dance with a crossfade
+// give one body a new dance. crossfade only when replacing a previous motion;
+// the FIRST assignment enters at full weight so it never shows the rest (T) pose.
 function setModelDance(c, clip, phaseMul = 1, scatterMul = 1){
-  if (c.action) c.action.fadeOut(0.4);
+  const prev = c.action;
   const action = c.mixer.clipAction(clip);
-  action.reset();
+  action.reset();                                   // tras reset, peso = 1
   action.setLoop(THREE.LoopRepeat, Infinity);
   action.timeScale = 1 + rf(-0.08, 0.08) * scatterMul;
   action.time = clip.duration * Math.random() * phaseMul;
-  action.fadeIn(0.4);
+  if (prev && prev !== action){                     // cruce entre dos movimientos (sin T-pose)
+    prev.fadeOut(0.4);
+    action.fadeIn(0.4);
+  }
   action.play();
   c.action = action;
 }

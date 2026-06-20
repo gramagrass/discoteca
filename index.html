@@ -515,11 +515,7 @@ const FORMATIONS = ['aleatorio','cuadricula','anillo','anillo_fuera','circulo','
 const CAMMODES   = ['libre','orbita','sobrevuelo','tv','cenital','cenital_inclinada'];
 
 // restrict any colour to a darker, less-saturated range (the scene's tint palette)
-function clampColor(hex){
-  const c = new THREE.Color(hex); const hsl = {}; c.getHSL(hsl);
-  c.setHSL(hsl.h, Math.min(hsl.s, 0.5), Math.min(Math.max(hsl.l, 0.12), 0.55));
-  return c.getHex();
-}
+function clampColor(hex){ return hex; }   // sin restricción: "color luz" llega a blanco y a cualquier color
 
 let bodies = [];   // [{scene}]
 let allClips = []; // [{clip, family}]

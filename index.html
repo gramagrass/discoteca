@@ -116,6 +116,10 @@
       <label>cambio de baile <span class="val" id="v-dchg">0</span></label>
       <input id="s-dchg" type="range" min="0" max="1" step="0.01" value="0">
     </div>
+    <div class="ctl">
+      <label>velocidad <span class="val" id="v-mov">1.0</span>×</label>
+      <input id="s-mov" type="range" min="0" max="1" step="0.01" value="0.5">
+    </div>
 
     <div class="sec">espacio</div>
     <div class="ctl">
@@ -165,8 +169,8 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
 
     <div class="sec">efecto</div>
     <div class="ctl">
-      <label>vintage <span class="val" id="v-vintage">50</span></label>
-      <input id="s-vintage" type="range" min="0" max="1" step="0.01" value="0.50">
+      <label>noise <span class="val" id="v-noise">50</span></label>
+      <input id="s-noise" type="range" min="0" max="1" step="0.01" value="0.50">
     </div>
 
     <div class="sec">luz / estrobo</div>
@@ -237,7 +241,8 @@ const DEFAULTS = {
   vistaCamara: 'libre', camVelocidad: 40,       // modo de cámara + velocidad
   cambioBaile: 0,                               // frecuencia de cambio de baile por modelo
   formacion: 'aleatorio',                       // disposición espacial
-  vintage: 50,                                  // video entrelazado vintage 0–100 (0 = off)
+  movimiento: 50,                               // velocidad del baile 0–100 (50 = normal, 100 = 2×)
+  noise: 50,                                    // ruido de película 0–100 (0 = off)
 };
 const cfg = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 
@@ -256,7 +261,8 @@ let camMode      = cfg.vistaCamara;             // 'libre' | 'orbita' | 'sobrevu
 let camSpeed     = cfg.camVelocidad / 100;      // velocidad de cámara (cortes / vuelo / órbita)
 let danceChange  = cfg.cambioBaile / 100;       // 0 = nunca · 1 = cambios frecuentes por modelo
 let formation    = cfg.formacion;               // 'aleatorio' | 'cuadricula' | 'anillo' | 'circulo' | 'fila' | 'espiral'
-let vintage      = cfg.vintage / 100;           // 0 = off · 1 = entrelazado fuerte
+let animSpeed    = cfg.movimiento / 50;         // 0 = quietos · 1 = normal · 2 = doble
+let noise        = cfg.noise / 100;             // 0 = off · 1 = ruido fuerte
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
 const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
@@ -290,9 +296,8 @@ scene.fog = new THREE.FogExp2(0x050507, 0.035);
 
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
 
-// ---------------------------------------------------------------- post: vintage interlaced video
-// alternate field lines, faint field flicker + comb offset, mild chroma/grain/vignette.
-const VintageShader = {
+// ---------------------------------------------------------------- post: film noise (only grain)
+const NoiseShader = {
   uniforms: {
     tDiffuse:    { value: null },
     uTime:       { value: 0 },
@@ -304,49 +309,20 @@ const VintageShader = {
     uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount;
     varying vec2 vUv;
     void main(){
-      float a = uAmount;
-      vec2 c = vUv - 0.5;
-      float lines = uResolution.y;                          // una banda por píxel → bandas finas
-      float line  = floor(vUv.y * lines);
-      float parity = mod(line, 2.0);
-      float field  = mod(floor(uTime * 50.0), 2.0);         // campos a ~50 Hz
-      bool inactive = (parity != field);
-
-      // el campo inactivo se desplaza un pelín en horizontal (peine de entrelazado)
-      float off = inactive ? (a * 0.0016) : 0.0;
-      vec2 uv = vUv + vec2(off, 0.0);
-
-      // aberración cromática sutil
-      float ca = a * 0.0016;
-      vec3 col;
-      col.r = texture2D(tDiffuse, uv + c * ca).r;
-      col.g = texture2D(tDiffuse, uv).g;
-      col.b = texture2D(tDiffuse, uv - c * ca).b;
-
-      // entrelazado: línea alterna algo más oscura + leve parpadeo de campo
-      float scan = 1.0 - 0.12 * a * parity;
-      float flick = inactive ? (1.0 - 0.07 * a) : 1.0;
-      col *= scan * flick;
-
-      // viñeta + leve calidez/desaturación + grano
-      float vig = smoothstep(1.0, 0.35, length(c));
-      col *= mix(1.0, vig, 0.45 * a);
-      float lum = dot(col, vec3(0.299, 0.587, 0.114));
-      col = mix(col, vec3(lum) * vec3(1.06, 1.0, 0.92), 0.12 * a);
-      float gr = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
-      col += (gr - 0.5) * 0.05 * a;
-
+      vec3 col = texture2D(tDiffuse, vUv).rgb;
+      float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
+      col += (g - 0.5) * 0.14 * uAmount;   // ruido animado
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const vintagePass = new ShaderPass(VintageShader);
-composer.addPass(vintagePass);
+const noisePass = new ShaderPass(NoiseShader);
+composer.addPass(noisePass);
 composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final, conserva el look
-function applyVintage(){
-  vintagePass.enabled = vintage > 0.001;
-  vintagePass.uniforms.uAmount.value = vintage;
+function applyNoise(){
+  noisePass.enabled = noise > 0.001;
+  noisePass.uniforms.uAmount.value = noise;
 }
 
 // ---------------------------------------------------------------- lights
@@ -594,7 +570,7 @@ function randomizeAll(){
   rotRand     = Math.random();
   sizeVar     = Math.random() * 0.5;
   camMode     = ri(CAMMODES);
-  cam.baseAz  = Math.random() * TAU; cam.el = rf(0.1, 1.0); cam.rad = rf(5, 14);
+  cam.baseAz  = Math.random() * TAU; cam.el = rf(0.1, 1.0); cam.rad = rf(1.2, 8);   // tiende a más cercano
   cam.fly = null; cam.tvEnd = 0;
   masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.25, 1.0);  // todo el rango ± evitando la zona muerta en 0
   applyBodyLook(); refreshStatic();
@@ -613,13 +589,13 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const smooth = k => k * k * (3 - 2 * k);
 function newFly(fa, fe, fr){
   return { fromAz: fa, fromEl: fe, fromRad: fr,
-           toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(4.5, 15), t: 0 };
+           toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(1.5, 12), t: 0 };
 }
 function newTvShot(now){
   cam.tvEnd  = now + lerp(11000, 450, camSpeed * camSpeed);   // extremo bajo: cortes muy lentos
   cam.tvAz   = Math.random() * TAU;
   cam.tvEl   = rf(0.08, 0.95);
-  cam.tvRad  = rf(3.8, 13);
+  cam.tvRad  = rf(1.2, 11);
   cam.tvZoom = rf(-0.5, 0.7);                      // zoom lento dentro de la toma
 }
 let dragging = false, lastX = 0, lastY = 0;
@@ -633,7 +609,7 @@ addEventListener('pointermove', e => {
 });
 renderer.domElement.addEventListener('wheel', e => {
   e.preventDefault();
-  cam.rad = Math.max(3.5, Math.min(24, cam.rad + e.deltaY * 0.01));
+  cam.rad = Math.max(0.4, Math.min(24, cam.rad + e.deltaY * 0.01));   // permite acercarse mucho a la masa
 }, { passive:false });
 
 // ---------------------------------------------------------------- audio (synthesised kick + hat — original, no copyright)
@@ -720,7 +696,7 @@ function tick(now){
   beatClock += dt * (BPM / 60);
   const beatPulse = Math.pow(0.5 - 0.5 * Math.cos(beatClock * TAU), 1.25);
 
-  for (const c of crowd) c.mixer.update(dt);
+  for (const c of crowd) c.mixer.update(dt * animSpeed);   // velocidad global del baile
 
   // cambio de baile espontáneo por modelo (proceso probabilístico → tiempos dispares)
   if (danceChange > 0 && clips.length){
@@ -796,7 +772,7 @@ function tick(now){
       fAz = cam.baseAz + Math.sin(t * 0.25) * 0.12;
   }
   fEl  = Math.max(0.04, Math.min(1.5, fEl));
-  fRad = Math.max(3.0,  Math.min(28,  fRad));
+  fRad = Math.max(0.4,  Math.min(28,  fRad));
   cam.curAz = fAz; cam.curEl = fEl; cam.curRad = fRad;
   camera.position.set(Math.cos(fAz) * Math.cos(fEl) * fRad, 1.3 + Math.sin(fEl) * fRad, Math.sin(fAz) * Math.cos(fEl) * fRad);
   camera.lookAt(0, lookY, 0);
@@ -810,7 +786,7 @@ function tick(now){
   }
 
   scheduleAudio();
-  vintagePass.uniforms.uTime.value = now / 1000;
+  noisePass.uniforms.uTime.value = now / 1000;
   composer.render();
   requestAnimationFrame(tick);
 }
@@ -839,7 +815,8 @@ $('s-dchg').oninput  = e => { danceChange = +e.target.value; $('v-dchg').textCon
 $('s-form').onchange = e => { formation = e.target.value; applyLayout(); };
 $('s-cam').onchange  = e => { camMode = e.target.value; cam.fly = null; cam.tvEnd = 0; };
 $('s-camvel').oninput = e => { camSpeed = +e.target.value; $('v-camvel').textContent = Math.round(camSpeed*100); };
-$('s-vintage').oninput = e => { vintage = +e.target.value; $('v-vintage').textContent = Math.round(vintage*100); applyVintage(); };
+$('s-noise').oninput = e => { noise = +e.target.value; $('v-noise').textContent = Math.round(noise*100); applyNoise(); };
+$('s-mov').oninput = e => { animSpeed = +e.target.value * 2; $('v-mov').textContent = animSpeed.toFixed(1); };
 $('grid').onclick = () => { const v = !grid.visible; grid.visible = v; floor.visible = v; };
 $('sound').onclick = () => {
   if (!audio) startAudio();
@@ -870,7 +847,7 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
-  vintagePass.uniforms.uResolution.value.set(innerWidth, innerHeight);
+  noisePass.uniforms.uResolution.value.set(innerWidth, innerHeight);
 });
 
 // push the current values into every control + its readout
@@ -888,10 +865,11 @@ function syncUI(){
   set('s-base', baseLight); $('v-base').textContent = Math.round(baseLight*100);
   set('s-choreo', choreo); $('v-choreo').textContent = Math.round(choreo*100);
   set('s-dchg', danceChange); $('v-dchg').textContent = Math.round(danceChange*100);
+  set('s-mov', animSpeed / 2); $('v-mov').textContent = animSpeed.toFixed(1);
   set('s-form', formation);
   set('s-cam', camMode);
   set('s-camvel', camSpeed); $('v-camvel').textContent = Math.round(camSpeed*100);
-  set('s-vintage', vintage); $('v-vintage').textContent = Math.round(vintage*100);
+  set('s-noise', noise); $('v-noise').textContent = Math.round(noise*100);
 }
 // resume audio on first user gesture (browsers block autoplay until then)
 addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended') audio.resume(); });
@@ -900,7 +878,7 @@ addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended'
 loadAssets().then(() => {
   $('m-dances').textContent = clips.length;
   randomizeAll();             // siempre arranca con una composición aleatoria (dado inicial)
-  applyVintage();
+  applyNoise();
   if (cfg.piso){ grid.visible = true; floor.visible = true; }
   setStrobe(!!cfg.estrobo);    // also sets disco/strobe light levels via refreshStatic
   if (cfg.sonido) $('sound').click();   // begins on first click due to autoplay rules

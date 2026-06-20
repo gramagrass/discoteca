@@ -17,7 +17,8 @@ window.CONFIG = {
   luzBase:           33,         // luz entre destellos 0–100 (0 = negro)
   coreografia:       100,        // 0 = todos el mismo baile, 100 = cada quien el suyo
   cambioBaile:       0,          // frecuencia de cambio de baile por modelo 0–100 (0 = nunca)
-  vintage:           50,         // video entrelazado vintage 0–100 (0 = off)
+  movimiento:        50,         // velocidad del baile 0–100 (50 = normal, 0 = quietos, 100 = 2×)
+  noise:             50,         // ruido de película 0–100 (0 = off)
 
   // disposición: aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral
   formacion:         "aleatorio",

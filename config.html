@@ -130,14 +130,14 @@
 
 <script>
 const DEFAULTS = {
-  cuerpos:13, coreografia:100, cambioBaile:0, movimiento:50, noise:10,
+  cuerpos:13, coreografia:100, cambioBaile:0, movimiento:5, noise:10,
   formacion:'aleatorio',
   rotacionAzar:100, cercania:14, tamanoAzar:0,
-  vistaCamara:'libre', camVelocidad:40,
+  vistaCamara:'sobrevuelo', camVelocidad:40,
   camAngulo:293, camAltura:2, camZoom:3.8,
   luzGeneral:98, colorLuz:'#ffffff', bpm:112,
   estroboVel:7.5, estroboIntensidad:1.6, luzBase:33,
-  estrobo:true, sonido:false, piso:false,
+  estrobo:true, sonido:false, piso:false, autoRandom:false, autoRandomSeg:10,
 };
 const cur = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 
@@ -149,6 +149,7 @@ const SECTIONS = [
     ['cambioBaile','cambio de baile',0,100,1,'frecuencia de cambio por modelo (0 = nunca)'],
     ['movimiento','velocidad',0,100,1,'velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)'],
     ['noise','noise',0,100,1,'ruido de película (0 = off)'],
+    ['autoRandomSeg','auto random (s)',1,60,1,'intervalo del auto-random en segundos'],
   ]],
   ['espacio', [
     ['formacion','formación','select',['aleatorio','cuadricula','anillo','anillo_fuera','circulo','fila','espiral'],0,'aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral'],
@@ -175,6 +176,7 @@ const SECTIONS = [
     ['estrobo','estrobo','bool',0,0,'arrancar en modo estrobo'],
     ['sonido','sonido','bool',0,0,'arrancar con sonido (suena al primer clic)'],
     ['piso','piso','bool',0,0,'mostrar piso/rejilla'],
+    ['autoRandom','auto random','bool',0,0,'re-roll automático cada cierto tiempo'],
   ]],
 ];
 

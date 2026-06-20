@@ -17,7 +17,7 @@ window.CONFIG = {
   luzBase:           33,         // luz entre destellos 0–100 (0 = negro)
   coreografia:       100,        // 0 = todos el mismo baile, 100 = cada quien el suyo
   cambioBaile:       0,          // frecuencia de cambio de baile por modelo 0–100 (0 = nunca)
-  movimiento:        50,         // velocidad del baile 0–100 (50 = normal, 0 = quietos, 100 = 2×)
+  movimiento:        5,          // velocidad del baile 0–100 (50 = normal → aquí 0.1×)
   noise:             10,         // ruido de película 0–100 (0 = off)
 
   // disposición: aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral
@@ -26,6 +26,8 @@ window.CONFIG = {
   estrobo:           true,       // arrancar en modo estrobo
   sonido:            false,      // arrancar con sonido (suena al primer clic)
   piso:              false,      // mostrar piso/rejilla
+  autoRandom:        false,      // re-rollear solo cada cierto tiempo (para dejarlo corriendo)
+  autoRandomSeg:     10,         // intervalo del auto-random en segundos (1–60)
 
   // cámara — lee los valores en vivo en el panel ("cámara") y cópialos aquí
   camAngulo:         293,        // ángulo horizontal en grados
@@ -33,6 +35,6 @@ window.CONFIG = {
   camZoom:           3.8,        // distancia (acercar/alejar)
 
   // modo de cámara: libre | orbita | sobrevuelo | tv | cenital | cenital_inclinada
-  vistaCamara:       "libre",
+  vistaCamara:       "sobrevuelo",
   camVelocidad:      40          // velocidad de cámara 0–100 (cortes / vuelo / órbita)
 };

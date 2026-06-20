@@ -40,6 +40,12 @@
     background:rgba(5,5,7,0.55); backdrop-filter:blur(8px);
     border-left:1px solid var(--line);
   }
+  @media (min-width:760px){ #dock{ width:265px; } }   /* +15% en desktop */
+  .chk{
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+    font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-dim);
+  }
+  .chk input{ accent-color:var(--accent); width:14px; height:14px; }
   #dock::-webkit-scrollbar{ width:6px; }
   #dock::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
   .ctl{ display:flex; flex-direction:column; gap:6px; }
@@ -101,7 +107,12 @@
 <div id="ui">
   <div id="dock" class="panel">
     <div id="title">DISCO.GRAMA.CO</div>
-    <button id="reroll" class="primary">tirar dados ↻</button>
+    <button id="reroll" class="primary">RANDOM</button>
+    <label class="chk"><input type="checkbox" id="s-auto"> auto random</label>
+    <div class="ctl">
+      <label>cada <span class="val" id="v-autosec">10</span> s</label>
+      <input id="s-autosec" type="range" min="1" max="60" step="1" value="10">
+    </div>
 
     <div class="sec">cuerpos</div>
     <div class="ctl">
@@ -238,11 +249,13 @@ const DEFAULTS = {
   estroboVel: 7.5, estroboIntensidad: 4.0, luzBase: 0, coreografia: 100,
   estrobo: false, sonido: false, piso: false,
   camAngulo: 34, camAltura: 13, camZoom: 9.5,   // cámara (grados, grados, distancia)
-  vistaCamara: 'libre', camVelocidad: 40,       // modo de cámara + velocidad
+  vistaCamara: 'sobrevuelo', camVelocidad: 40,  // modo de cámara + velocidad
   cambioBaile: 0,                               // frecuencia de cambio de baile por modelo
   formacion: 'aleatorio',                       // disposición espacial
-  movimiento: 50,                               // velocidad del baile 0–100 (50 = normal, 100 = 2×)
+  movimiento: 5,                                // velocidad del baile 0–100 (50 = normal → aquí 0.1×)
   noise: 10,                                    // ruido de película 0–100 (0 = off)
+  autoRandom: false,                            // re-rollear solo cada cierto tiempo
+  autoRandomSeg: 10,                            // intervalo del auto-random en segundos (1–60)
 };
 const cfg = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 
@@ -263,6 +276,9 @@ let danceChange  = cfg.cambioBaile / 100;       // 0 = nunca · 1 = cambios frec
 let formation    = cfg.formacion;               // 'aleatorio' | 'cuadricula' | 'anillo' | 'circulo' | 'fila' | 'espiral'
 let animSpeed    = cfg.movimiento / 50;         // 0 = quietos · 1 = normal · 2 = doble
 let noise        = cfg.noise / 100;             // 0 = off · 1 = ruido fuerte
+let autoRandom   = !!cfg.autoRandom;            // re-roll automático cada cierto tiempo
+let autoRandomSec = cfg.autoRandomSeg;          // intervalo base (s)
+let nextAuto     = 0;                           // momento del próximo auto-random
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
 const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
@@ -560,8 +576,8 @@ function assignDances(){
   }
 }
 
-// "tirar dados": composición aleatoria de cuerpos/espacio/cámara.
-// NO toca: cercanía, nada de luz/estrobo, velocidad de cámara, ni el sonido.
+// RANDOM: composición aleatoria de cuerpos / espacio / luz general.
+// NO toca: cámara (sigue su vuelo), cercanía, resto de luz/estrobo, ni el sonido.
 function randomizeAll(){
   COUNT       = 6 + (Math.random() * 25 | 0);          // 6..30
   choreo      = Math.random();
@@ -569,14 +585,13 @@ function randomizeAll(){
   formation   = ri(FORMATIONS);
   rotRand     = Math.random();
   sizeVar     = Math.random() * 0.5;
-  camMode     = ri(CAMMODES);
-  cam.baseAz  = Math.random() * TAU; cam.el = rf(0.1, 1.0); cam.rad = rf(1.2, 8);   // tiende a más cercano
-  cam.fly = null; cam.tvEnd = 0;
   masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.25, 1.0);  // todo el rango ± evitando la zona muerta en 0
   applyBodyLook(); refreshStatic();
   placeCrowd(COUNT);                                   // reconstruye + aplica formación + reparte bailes
   syncUI();
 }
+// programa el próximo auto-random con variabilidad (±30%)
+function scheduleAuto(now){ nextAuto = now + autoRandomSec * 1000 * (0.7 + Math.random() * 0.6); }
 
 // ---------------------------------------------------------------- camera control (drag + wheel + gentle sway)
 const DEG = Math.PI / 180;
@@ -696,6 +711,8 @@ function tick(now){
   beatClock += dt * (BPM / 60);
   const beatPulse = Math.pow(0.5 - 0.5 * Math.cos(beatClock * TAU), 1.25);
 
+  if (autoRandom && now >= nextAuto){ randomizeAll(); scheduleAuto(now); }   // re-roll automático
+
   for (const c of crowd) c.mixer.update(dt * animSpeed);   // velocidad global del baile
 
   // cambio de baile espontáneo por modelo (proceso probabilístico → tiempos dispares)
@@ -793,7 +810,9 @@ function tick(now){
 
 // ---------------------------------------------------------------- UI wiring
 const $ = id => document.getElementById(id);
-$('reroll').onclick = randomizeAll;       // composición aleatoria completa (menos velocidad cámara)
+$('reroll').onclick = randomizeAll;       // RANDOM: nueva composición
+$('s-auto').onchange = e => { autoRandom = e.target.checked; if (autoRandom) scheduleAuto(performance.now()); };
+$('s-autosec').oninput = e => { autoRandomSec = +e.target.value; $('v-autosec').textContent = autoRandomSec; if (autoRandom) scheduleAuto(performance.now()); };
 $('strobe').onclick = () => setStrobe(!strobeOn);
 $('s-bpm').oninput = e => { BPM = +e.target.value; $('v-bpm').textContent = BPM; };
 $('s-count').oninput = e => { COUNT = +e.target.value; $('v-count').textContent = COUNT; $('m-count').textContent = COUNT; placeCrowd(COUNT); };
@@ -866,6 +885,8 @@ function syncUI(){
   set('s-choreo', choreo); $('v-choreo').textContent = Math.round(choreo*100);
   set('s-dchg', danceChange); $('v-dchg').textContent = Math.round(danceChange*100);
   set('s-mov', animSpeed / 2); $('v-mov').textContent = animSpeed.toFixed(1);
+  { const el = $('s-auto'); if (el) el.checked = autoRandom; }
+  set('s-autosec', autoRandomSec); $('v-autosec').textContent = autoRandomSec;
   set('s-form', formation);
   set('s-cam', camMode);
   set('s-camvel', camSpeed); $('v-camvel').textContent = Math.round(camSpeed*100);

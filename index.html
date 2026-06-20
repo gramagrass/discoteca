@@ -788,7 +788,7 @@ function scheduleAudio(){
 // dark room, colour lights off, a single white flash that reveals the bodies in
 // frozen poses. flash rate is set in Hz by the "estrobo vel" slider (independent of bpm).
 let strobeOn = false;
-const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
+const DISCO_HEMI = 0.45, STROBE_HEMI = 0.28, KEY_DISCO = 0.45;   // relleno hemisférico (sombra de los cuerpos no queda negra)
 
 // "luz general" (masterBright) is signed — it INVERTS where the light lands:
 //   +1 … 0  → light paints the bodies (clay-grey), background stays black.
@@ -817,7 +817,7 @@ function applyBodyLook(){
 // dark bodies reflect less, so in negative the directional (modelling) light is boosted
 // to recover the chiaroscuro; ambient stays low so shadows keep their depth.
 const KEY_BOOST = 1.0;   // material claro → sin refuerzo (luz igual que en positivo)
-const KEY_NORMAL = 0.95;   // intensidad de la direccional en modo normal (reemplaza el relleno de las voladoras)
+const KEY_NORMAL = 1.2;   // intensidad de la direccional en modo normal (reemplaza el relleno de las voladoras)
 function refreshStatic(){
   const amt = Math.abs(masterBright);
   hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;   // estrobo: bajo (contraste); normal: relleno visible
@@ -874,7 +874,7 @@ function tick(now){
   // NO iluminan los cuerpos (intensidad 0); solo pintan el fondo (domo) en negativo.
   key.color.setHex(strobeColor);
   discoLights.forEach(l => l.intensity = 0);
-  const kb = neg ? 1 : 1.6;   // en positivo (fondo negro) más luz para que los cuerpos se vean
+  const kb = neg ? 1 : 2.8;   // en positivo (fondo negro) mucha más luz para que los cuerpos se vean
   let domeInten;
   if (strobeOn){
     strobeClock += dt * strobeHz;

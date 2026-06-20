@@ -24,8 +24,9 @@
     font-size:9.5px; letter-spacing:0.22em; text-transform:uppercase; color:var(--accent);
     margin:22px 0 12px; padding-top:13px; border-top:1px solid var(--line);
   }
-  .row{ display:grid; grid-template-columns:130px 1fr 56px; align-items:center; gap:12px; margin:11px 0; }
+  .row{ display:grid; grid-template-columns:130px 1fr 56px 22px; align-items:center; gap:12px; margin:11px 0; }
   .row label{ font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-dim); }
+  .rnd{ justify-self:center; accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
   input[type=range]{
     -webkit-appearance:none; appearance:none; width:100%; height:2px; background:var(--line);
     outline:none; cursor:pointer;
@@ -94,7 +95,7 @@
 <div class="wrap">
   <div>
     <h1>cuerpos · configuración</h1>
-    <div class="sub">edita el estado inicial · guardá en el sitio (o descargá) · recargá la obra</div>
+    <div class="sub">edita el estado inicial · la casilla ☑ a la derecha = ese parámetro entra al botón RANDOM · guardá o descargá · recargá</div>
     <div id="form"></div>
   </div>
 
@@ -208,6 +209,15 @@ function clampColor(hex){
 const state = Object.assign({}, cur);
 const form = document.getElementById('form');
 
+// parámetros que pueden entrar al botón RANDOM (la casilla a la derecha de cada uno)
+const RND_DEFAULT = {
+  cuerpos:true, familia:false, coreografia:true, cambioBaile:true, movimiento:false, noise:false,
+  formacion:true, rotacionAzar:true, cercania:false, tamanoAzar:true, vistaCamara:false,
+  luzGeneral:true, colorLuz:false, bpm:false, estroboVel:false, estroboIntensidad:false, luzBase:false
+};
+const RANDOMIZABLE = Object.keys(RND_DEFAULT);
+state.random = Object.assign({}, RND_DEFAULT, cur.random || {});
+
 function isFloat(step){ return step && step < 1; }
 
 SECTIONS.forEach(([title, fields]) => {
@@ -249,6 +259,14 @@ SECTIONS.forEach(([title, fields]) => {
       nm.oninput = () => { let v=isFloat(step)?parseFloat(nm.value):parseInt(nm.value,10); if(isNaN(v)) return; v=clamp(v); state[key]=v; rg.value=v; render(); };
       row.appendChild(rg); row.appendChild(nm);
     }
+    // casilla "entra a RANDOM" (4ta columna) para los parámetros randomizables
+    if (RANDOMIZABLE.includes(key)){
+      const rc = document.createElement('input');
+      rc.type='checkbox'; rc.className='rnd'; rc.title='entra al botón RANDOM';
+      rc.checked = !!state.random[key];
+      rc.onchange = () => { state.random[key] = rc.checked; render(); };
+      row.appendChild(rc);
+    }
     form.appendChild(row);
   });
 });
@@ -273,6 +291,11 @@ function buildText(){
       s += '   // ' + COMMENTS[key] + '\n';
     });
   });
+  s += '\n  // qué parámetros entran al botón RANDOM\n  random: {\n';
+  RANDOMIZABLE.forEach((k, i) => {
+    s += '    ' + (k + ':').padEnd(18) + (state.random[k] ? 'true' : 'false') + (i < RANDOMIZABLE.length - 1 ? ',' : '') + '\n';
+  });
+  s += '  }\n';
   s += '};\n';
   return s;
 }

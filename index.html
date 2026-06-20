@@ -310,6 +310,9 @@ let activeFamily = cfg.familia || 'todas';      // pool de movimientos: todas|da
 // capas de render (INSIDE) — cada una con su interruptor, default off
 let lNiebla = !!cfg.capaNiebla, lGrade = !!cfg.capaGrade, lDither = !!cfg.capaDither, lBloom = !!cfg.capaBloom;
 let showFps = !!cfg.fps;
+// qué parámetros entran al botón RANDOM (configurable en config.html)
+const DEFAULT_RANDOM = { cuerpos:true, coreografia:true, cambioBaile:true, formacion:true, rotacionAzar:true, tamanoAzar:true, luzGeneral:true };
+let randomInc = Object.assign({}, DEFAULT_RANDOM, cfg.random || {});
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
 const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
@@ -649,17 +652,32 @@ function assignDances(){
   }
 }
 
-// RANDOM: composición aleatoria de cuerpos / espacio / luz general.
-// NO toca: cámara (sigue su vuelo), cercanía, resto de luz/estrobo, ni el sonido.
+// generador aleatorio por parámetro (cada uno setea su variable)
+const RANDOMIZERS = {
+  cuerpos:           () => { COUNT = 6 + (Math.random() * 25 | 0); },
+  familia:           () => { activeFamily = ri(['todas','dance','locomotion','expression','idle']); },
+  coreografia:       () => { choreo = Math.random(); },
+  cambioBaile:       () => { danceChange = Math.random() * 0.6; },
+  movimiento:        () => { animSpeed = Math.random() * 2; },
+  noise:             () => { noise = Math.random() * 0.5; },
+  formacion:         () => { formation = ri(FORMATIONS); },
+  rotacionAzar:      () => { rotRand = Math.random(); },
+  cercania:          () => { closeness = Math.random(); },
+  tamanoAzar:        () => { sizeVar = Math.random() * 0.5; },
+  vistaCamara:       () => { camMode = ri(CAMMODES); cam.fly = null; cam.tvEnd = 0; },
+  luzGeneral:        () => { masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.25, 1.0); },
+  colorLuz:          () => { strobeColor = new THREE.Color().setHSL(Math.random(), rf(0.15, 0.5), rf(0.18, 0.52)).getHex(); },
+  bpm:               () => { BPM = 80 + (Math.random() * 50 | 0); },
+  estroboVel:        () => { strobeHz = rf(2, 14); },
+  estroboIntensidad: () => { strobePeak = rf(1.5, 8); },
+  luzBase:           () => { baseLight = Math.random() * 0.5; },
+};
+
+// RANDOM: solo toca los parámetros marcados en randomInc (config: "random")
 function randomizeAll(){
-  COUNT       = 6 + (Math.random() * 25 | 0);          // 6..30
-  choreo      = Math.random();
-  danceChange = Math.random() * 0.6;
-  formation   = ri(FORMATIONS);
-  rotRand     = Math.random();
-  sizeVar     = Math.random() * 0.5;
-  masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.25, 1.0);  // todo el rango ± evitando la zona muerta en 0
-  applyBodyLook(); refreshStatic();
+  for (const k in RANDOMIZERS) if (randomInc[k]) RANDOMIZERS[k]();
+  discoLights.forEach(l => l.color.set(l.userData.tint === 'pick' ? strobeColor : ACCENT));
+  applyBodyLook(); refreshStatic(); updatePost();
   placeCrowd(COUNT);                                   // reconstruye + aplica formación + reparte bailes
   syncUI();
 }

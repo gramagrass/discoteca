@@ -38,6 +38,14 @@ window.CONFIG = {
   capaBloom:         false,      // bloom
   fps:               false,      // mostrar medidor de FPS
 
+  // qué parámetros entran al botón RANDOM (marcá/desmarcá con las casillas del editor)
+  random: {
+    cuerpos: true,  familia: false, coreografia: true,  cambioBaile: true,
+    movimiento: false, noise: false, formacion: true,   rotacionAzar: true,
+    cercania: false, tamanoAzar: true, vistaCamara: false, luzGeneral: true,
+    colorLuz: false, bpm: false, estroboVel: false, estroboIntensidad: false, luzBase: false
+  },
+
   // cámara — lee los valores en vivo en el panel ("cámara") y cópialos aquí
   camAngulo:         293,        // ángulo horizontal en grados
   camAltura:         2,          // altura de la cámara en grados

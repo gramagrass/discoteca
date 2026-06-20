@@ -346,7 +346,9 @@ const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
 
 // ---------------------------------------------------------------- asset urls (locales; servidos desde ./assets)
 const MODELS = window.MODELS || ['Masculine', 'Feminine'];
-const BODY_URLS = MODELS.map(n => `./assets/bodies/${n}.glb`);
+// cada entrada puede ser un nombre local (assets/bodies/NOMBRE.glb) o una URL completa
+// (p. ej. un avatar de Ready Player Me: https://models.readyplayer.me/ID.glb)
+const BODY_URLS = MODELS.map(n => /^https?:/.test(n) ? n : `./assets/bodies/${n}.glb`);
 // movimientos por familia, desde el manifiesto motions.js (dance/idle/locomotion/expression)
 const MOTIONS = window.MOTIONS || { dance: [], idle: [], locomotion: [], expression: [] };
 const MOTION_ENTRIES = [];
@@ -539,16 +541,19 @@ let bodyMat;       // shared body material (clay ↔ dark translucent, driven by
 let bodyCenterY = 0.84;     // vertical centre of a body (measured after load)
 let lookY = 1.0;            // camera focus height = the shared mid-plane
 
+const loadSafe = (url) => load(url).catch(err => { console.warn('no se pudo cargar', url, err); return null; });
 async function loadAssets(){
   const [bodyGltfs, motionGltfs] = await Promise.all([
-    Promise.all(BODY_URLS.map(load)),
+    Promise.all(BODY_URLS.map(loadSafe)),                 // un cuerpo que falle se omite, no rompe la obra
     Promise.all(MOTION_ENTRIES.map(e => load(e.url))),
   ]);
   // override every body material with a uniform matte greyscale "clay" surface —
   // no skin/clothes colour, so form reads purely through light & shadow.
   bodyMat = new THREE.MeshStandardMaterial({ color: 0xc9c9cd, roughness: 0.78, metalness: 0.0 });
-  bodies = bodyGltfs.map(g => {
+  bodies = bodyGltfs.filter(g => g).map(g => {
     g.scene.traverse(o => {
+      // huesos de Mixamo (mixamorig:Hips…) → nombres RPM (Hips…) para que los 119 clips apliquen
+      if (o.name && /^mixamorig:?/i.test(o.name)) o.name = o.name.replace(/^mixamorig:?/i, '');
       if (o.isMesh){ o.castShadow = true; o.frustumCulled = false; o.material = bodyMat; }
     });
     return g.scene;

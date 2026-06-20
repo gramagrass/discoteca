@@ -340,7 +340,8 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050507);
-const FOG_BASE = 0.035, FOG_HAZE = 0.075;   // capa "niebla atmosférica" sube la densidad
+const FOG_BASE = 0.035, FOG_HAZE = 0.085;   // capa "niebla atmosférica" sube la densidad
+const HAZE = 0x2e3440;                       // color de bruma visible (gris-azulado frío) para la capa niebla
 scene.fog = new THREE.FogExp2(0x050507, FOG_BASE);
 
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
@@ -379,7 +380,7 @@ const GradeShader = {
 };
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.6, 0.4, 0.82);  // capa bloom
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.75, 0.5, 0.45);  // capa bloom (umbral bajo = florece en tonos medios)
 bloomPass.enabled = false;
 composer.addPass(bloomPass);
 const gradePass = new ShaderPass(GradeShader);
@@ -762,7 +763,9 @@ const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 //    0 …-1  → bodies go flat black (silhouettes); the light/colour moves to the
 //             environment, so the silhouettes read against a glowing backdrop.
 // magnitude = how much light; sign = bodies-lit (+) vs background-lit (−).
-function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); }
+// el fondo sigue el modo; la niebla, si está activa, tiñe la fog con la bruma visible
+// (desacoplada del fondo) para que los cuerpos lejanos se disuelvan a cualquier nivel de luz
+function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(lNiebla ? HAZE : hex); }
 function applyBodyLook(){
   if (!bodyMat) return;
   bodyMat.color.setHex(0xc9c9cd);                // misma arcilla en + y − (prueba)

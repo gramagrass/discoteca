@@ -140,6 +140,7 @@ const DEFAULTS = {
   estroboVel:7.5, estroboIntensidad:1.6, luzBase:33,
   estrobo:true, sonido:false, piso:false, autoRandom:false, autoRandomSeg:10,
   capaNiebla:false, capaGrade:false, capaDither:false, capaBloom:false, fps:false,
+  nieblaDens:50, brumaBrillo:40, bloomFuerza:50, gradeInt:100,
 };
 const cur = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 
@@ -174,6 +175,12 @@ const SECTIONS = [
     ['estroboVel','estrobo vel',0.5,20,0.1,'destellos por segundo'],
     ['estroboIntensidad','estrobo intensidad',0,12,0.1,'fuerza del destello (0 = negro)'],
     ['luzBase','luz base',0,100,1,'luz entre destellos (0 = negro)'],
+  ]],
+  ['render · valores de capas', [
+    ['nieblaDens','niebla densidad',0,100,1,'densidad de niebla'],
+    ['brumaBrillo','brillo bruma',0,100,1,'0 = bruma oscura (atmósfera en negro) · 100 = clara'],
+    ['bloomFuerza','bloom fuerza',0,100,1,'fuerza del bloom'],
+    ['gradeInt','grade intensidad',0,100,1,'intensidad del grade frío'],
   ]],
   ['modo', [
     ['estrobo','estrobo','bool',0,0,'arrancar en modo estrobo'],

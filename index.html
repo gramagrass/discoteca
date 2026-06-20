@@ -201,10 +201,23 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
     </div>
 
     <div class="sec">render · capas (INSIDE)</div>
-    <label class="chk"><input type="checkbox" id="l-niebla"> niebla atmosférica</label>
-    <label class="chk"><input type="checkbox" id="l-grade"> grade frío/apagado</label>
+    <div class="ctl">
+      <label><input type="checkbox" id="l-niebla"> niebla <span class="val" id="v-niebla">50</span></label>
+      <input id="s-niebla" type="range" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="ctl">
+      <label>brillo bruma <span class="val" id="v-haze">40</span></label>
+      <input id="s-haze" type="range" min="0" max="1" step="0.01" value="0.4">
+    </div>
+    <div class="ctl">
+      <label><input type="checkbox" id="l-bloom"> bloom <span class="val" id="v-bloomi">50</span></label>
+      <input id="s-bloomi" type="range" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="ctl">
+      <label><input type="checkbox" id="l-grade"> grade <span class="val" id="v-gradei">100</span></label>
+      <input id="s-gradei" type="range" min="0" max="1" step="0.01" value="1">
+    </div>
     <label class="chk"><input type="checkbox" id="l-dither"> dither anti-banding</label>
-    <label class="chk"><input type="checkbox" id="l-bloom"> bloom</label>
     <label class="chk"><input type="checkbox" id="l-fps"> mostrar FPS</label>
 
     <div class="sec">luz / estrobo</div>
@@ -310,6 +323,10 @@ let activeFamily = cfg.familia || 'todas';      // pool de movimientos: todas|da
 // capas de render (INSIDE) — cada una con su interruptor, default off
 let lNiebla = !!cfg.capaNiebla, lGrade = !!cfg.capaGrade, lDither = !!cfg.capaDither, lBloom = !!cfg.capaBloom;
 let showFps = !!cfg.fps;
+let nieblaDens  = (cfg.nieblaDens  ?? 50) / 100;   // densidad de niebla
+let hazeBri     = (cfg.brumaBrillo ?? 40) / 100;   // brillo del gris "bruma" (0 = oscuro → atmósfera en negro)
+let bloomFuerza = (cfg.bloomFuerza ?? 50) / 100;   // fuerza del bloom
+let gradeInt    = (cfg.gradeInt    ?? 100) / 100;  // intensidad del grade
 // qué parámetros entran al botón RANDOM (configurable en config.html)
 const DEFAULT_RANDOM = { cuerpos:true, coreografia:true, cambioBaile:true, formacion:true, rotacionAzar:true, tamanoAzar:true, luzGeneral:true };
 let randomInc = Object.assign({}, DEFAULT_RANDOM, cfg.random || {});
@@ -341,17 +358,10 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 const bgColor = new THREE.Color(0x050507);
 scene.background = bgColor;
-const FOG_BASE = 0.035, FOG_HAZE = 0.085;   // capa "niebla atmosférica" sube la densidad
-const HAZE = 0x9aa0ac;                        // bruma clara: los cuerpos se disuelven hacia este tono
+const FOG_BASE = 0.035;   // densidad base; la capa niebla la sube según su slider
 scene.fog = new THREE.FogExp2(0x050507, FOG_BASE);
-// telón de bruma luminoso (gradiente) para la capa niebla — uniforme, en cualquier modo/luz
-const hazeTex = (() => {
-  const cv = document.createElement('canvas'); cv.width = 4; cv.height = 256;
-  const ctx = cv.getContext('2d'); const g = ctx.createLinearGradient(0, 0, 0, 256);
-  g.addColorStop(0, '#d2d6dd'); g.addColorStop(1, '#697080');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, 4, 256);
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
-})();
+// niebla NO destructiva: solo cambia la fog (densidad + color "bruma"); los cuerpos
+// conservan su material/sombras y el fondo sigue el modo (negro disponible → atmósfera en oscuro).
 
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
 
@@ -371,12 +381,12 @@ const GradeShader = {
     varying vec2 vUv;
     void main(){
       vec3 col = texture2D(tDiffuse, vUv).rgb;
-      if (uGrade > 0.5){                          // paleta apagada y fría tipo INSIDE
+      if (uGrade > 0.001){                        // paleta apagada y fría tipo INSIDE (intensidad uGrade)
         float l = dot(col, vec3(0.299, 0.587, 0.114));
-        col = mix(col, vec3(l), 0.35);            // desaturar
-        col *= vec3(0.90, 0.97, 1.08);            // tinte frío
-        col = (col - 0.5) * 1.06 + 0.5;           // contraste suave
-        col = clamp(col, 0.0, 1.0);
+        vec3 g = mix(col, vec3(l), 0.35);         // desaturar
+        g *= vec3(0.90, 0.97, 1.08);              // tinte frío
+        g = (g - 0.5) * 1.06 + 0.5;               // contraste suave
+        col = mix(col, clamp(g, 0.0, 1.0), uGrade);
       }
       float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
       col += (g - 0.5) * 0.14 * uAmount;          // grano
@@ -387,7 +397,9 @@ const GradeShader = {
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
-const composer = new EffectComposer(renderer);
+// render target multisampled → antialias dentro del post-proceso (bordes suaves)
+const _rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { samples: 4, type: THREE.HalfFloatType });
+const composer = new EffectComposer(renderer, _rt);
 composer.addPass(new RenderPass(scene, camera));
 const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.75, 0.5, 0.45);  // capa bloom (umbral bajo = florece en tonos medios)
 bloomPass.enabled = false;
@@ -397,12 +409,12 @@ composer.addPass(gradePass);
 composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final
 function updatePost(){
   gradePass.uniforms.uAmount.value = noise;
-  gradePass.uniforms.uGrade.value  = lGrade ? 1 : 0;
+  gradePass.uniforms.uGrade.value  = lGrade ? gradeInt : 0;
   gradePass.uniforms.uDither.value = lDither ? 1 : 0;
   gradePass.enabled = (noise > 0.001) || lGrade || lDither;
   bloomPass.enabled = lBloom;
-  scene.fog.density = lNiebla ? FOG_HAZE : FOG_BASE;
-  applyBodyLook();   // niebla cambia el material a cuerpos oscuros (siluetas)
+  bloomPass.strength = bloomFuerza * 1.6;
+  scene.fog.density = lNiebla ? (FOG_BASE + nieblaDens * 0.10) : FOG_BASE;
 }
 
 // ---------------------------------------------------------------- lights
@@ -774,13 +786,15 @@ const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
 //             environment, so the silhouettes read against a glowing backdrop.
 // magnitude = how much light; sign = bodies-lit (+) vs background-lit (−).
 function setBg(hex){
-  if (scene.background !== bgColor) scene.background = bgColor;
-  bgColor.setHex(hex); scene.fog.color.setHex(hex);
+  bgColor.setHex(hex);
+  // con niebla: la fog tira hacia un gris "bruma" (su brillo es ajustable) → da profundidad
+  // incluso sobre fondo negro; sin niebla: la fog sigue el color del fondo (apenas se nota)
+  if (lNiebla) scene.fog.color.setRGB(hazeBri * 0.86, hazeBri * 0.92, hazeBri * 1.0);
+  else scene.fog.color.setHex(hex);
 }
 function applyBodyLook(){
   if (!bodyMat) return;
-  // con niebla, cuerpos oscuros (siluetas que se disuelven en la bruma); si no, arcilla clara
-  bodyMat.color.setHex(lNiebla ? 0x20242c : 0xc9c9cd);
+  bodyMat.color.setHex(0xc9c9cd);   // arcilla con sombreado (conserva detalle en cualquier modo)
   bodyMat.roughness = 0.92;
   bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
@@ -835,7 +849,7 @@ function tick(now){
   }
 
   const neg = masterBright < 0, amt = Math.abs(masterBright);
-  dome.visible = neg && !lNiebla;   // con niebla el telón de bruma reemplaza al domo
+  dome.visible = neg;
 
   // disco lights always orbit
   const orbit = (now / 1000) * 0.25;
@@ -861,15 +875,9 @@ function tick(now){
     domeInten = (0.65 + 0.5 * beatPulse) * amt;
   }
 
-  // background: niebla = telón de bruma luminoso (cualquier modo); si no, negro en + / domo en −
-  if (lNiebla){
-    if (scene.background !== hazeTex) scene.background = hazeTex;
-    scene.fog.color.setHex(HAZE);
-  } else if (neg){
-    setBg(0x000000); paintDome(now, domeInten);
-  } else {
-    setBg(strobeOn ? 0x000000 : 0x050507);
-  }
+  // background: negro en + / domo de color en − (la niebla solo tiñe la fog, ver setBg)
+  if (neg){ setBg(0x000000); paintDome(now, domeInten); }
+  else      setBg(strobeOn ? 0x000000 : 0x050507);
 
   // ---- cámara según modo ----
   // cs: curva cuadrática → el extremo bajo del slider es MUY lento y sutil
@@ -954,9 +962,13 @@ $('s-cam').onchange  = e => { camMode = e.target.value; cam.fly = null; cam.tvEn
 $('s-camvel').oninput = e => { camSpeed = +e.target.value; $('v-camvel').textContent = Math.round(camSpeed*100); };
 $('s-noise').oninput = e => { noise = +e.target.value; $('v-noise').textContent = Math.round(noise*100); updatePost(); };
 $('l-niebla').onchange = e => { lNiebla = e.target.checked; updatePost(); };
-$('l-grade').onchange  = e => { lGrade  = e.target.checked; updatePost(); };
-$('l-dither').onchange = e => { lDither = e.target.checked; updatePost(); };
+$('s-niebla').oninput  = e => { nieblaDens = +e.target.value; $('v-niebla').textContent = Math.round(nieblaDens*100); updatePost(); };
+$('s-haze').oninput    = e => { hazeBri = +e.target.value; $('v-haze').textContent = Math.round(hazeBri*100); };
 $('l-bloom').onchange  = e => { lBloom  = e.target.checked; updatePost(); };
+$('s-bloomi').oninput  = e => { bloomFuerza = +e.target.value; $('v-bloomi').textContent = Math.round(bloomFuerza*100); updatePost(); };
+$('l-grade').onchange  = e => { lGrade  = e.target.checked; updatePost(); };
+$('s-gradei').oninput  = e => { gradeInt = +e.target.value; $('v-gradei').textContent = Math.round(gradeInt*100); updatePost(); };
+$('l-dither').onchange = e => { lDither = e.target.checked; updatePost(); };
 $('l-fps').onchange    = e => { showFps = e.target.checked; fpsEl.style.display = showFps ? 'block' : 'none'; };
 $('s-mov').oninput = e => { animSpeed = +e.target.value * 2; $('v-mov').textContent = animSpeed.toFixed(1); };
 $('grid').onclick = () => { const v = !grid.visible; grid.visible = v; floor.visible = v; };
@@ -1021,6 +1033,10 @@ function syncUI(){
   { const c=$('l-dither'); if(c) c.checked=lDither; }
   { const c=$('l-bloom');  if(c) c.checked=lBloom; }
   { const c=$('l-fps');    if(c) c.checked=showFps; }
+  set('s-niebla', nieblaDens); $('v-niebla').textContent = Math.round(nieblaDens*100);
+  set('s-haze', hazeBri);      $('v-haze').textContent   = Math.round(hazeBri*100);
+  set('s-bloomi', bloomFuerza);$('v-bloomi').textContent = Math.round(bloomFuerza*100);
+  set('s-gradei', gradeInt);   $('v-gradei').textContent = Math.round(gradeInt*100);
   if (fpsEl) fpsEl.style.display = showFps ? 'block' : 'none';
 }
 // resume audio on first user gesture (browsers block autoplay until then)

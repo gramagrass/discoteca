@@ -44,6 +44,10 @@ window.CONFIG = {
   capaDither:         true,    // dither anti-banding
   capaBloom:          true,    // bloom
   fps:                true,    // mostrar FPS
+  nieblaDens:         50,      // densidad de niebla 0–100
+  brumaBrillo:        40,      // brillo del gris bruma 0–100 (0 = oscuro → atmósfera en negro)
+  bloomFuerza:        50,      // fuerza del bloom 0–100
+  gradeInt:           100,     // intensidad del grade 0–100
 
   // qué parámetros entran al botón RANDOM
   random: {

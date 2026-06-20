@@ -9,7 +9,7 @@ window.CONFIG = {
   familia:            "todas",    // pool de movimientos para las generaciones
   coreografia:        100,    // 0 = todos el mismo baile · 100 = cada quien el suyo
   cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
-  movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
+  movimiento:         30,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
   noise:              10,    // ruido de película (0 = off)
   autoRandomSeg:      10,    // intervalo del auto-random en segundos
 
@@ -44,7 +44,7 @@ window.CONFIG = {
   estrobo:            false,    // arrancar en modo estrobo
   sonido:             false,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
-  autoRandom:         false,    // re-roll automático cada cierto tiempo
+  autoRandom:         true,    // re-roll automático cada cierto tiempo
   panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto)
   sacudir:            true,    // sacudir el teléfono dispara un RANDOM
   capaNiebla:         true,    // niebla atmosférica (INSIDE)

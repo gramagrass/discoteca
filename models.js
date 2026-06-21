@@ -6,7 +6,7 @@
 window.MODELS = [
   // Solo cuerpos RPM nativos (A-pose) — impecables con los bailes.
   "Masculine", "Feminine",
-  "GothicGirl", "Cyberpunk", "Julia", "CyberMale", "Andra", "Harry", "Chen"
+  "GothicGirl", "Julia", "Andra", "Harry", "Chen"
 ];
 // Los 11 cuerpos Mixamo (Ch##) quedaron guardados en _local/bodies_mixamo/ para uso futuro.
 // Para reactivarlos: copiarlos de vuelta a assets/bodies/ y agregar sus nombres acá.

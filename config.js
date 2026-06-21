@@ -27,7 +27,7 @@ window.CONFIG = {
   camZoom:            3.8,    // distancia (menor = más cerca)
 
   // luz / estrobo
-  luzGeneral:         100,    // -100..100 (bajo cero: cuerpos oscuros translúcidos)
+  luzGeneral:         -100,    // -100..100 (bajo cero: cuerpos oscuros translúcidos)
   colorLuz:           "#ffffff",    // color del estrobo / luz
   bpm:                112,    // pulso de luces/audio
   estroboVel:         7.5,    // destellos por segundo

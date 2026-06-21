@@ -1,14 +1,12 @@
 /* ───────────────────────────────────────────────────────────────
    personajes (cuerpos) a cargar — nombres de archivo en assets/bodies/ sin .glb
-   Todos comparten el rig de Mixamo/RPM (la obra normaliza altura y orientación).
+   Todos comparten el rig RPM/Wolf3D (la obra normaliza altura y orientación).
    Para sumar uno: dejá el .glb en assets/bodies/ y agregá su nombre acá.
    ─────────────────────────────────────────────────────────────── */
 window.MODELS = [
-  // RPM nativos (rig Wolf3D) — impecables con los bailes
+  // Solo cuerpos RPM nativos (A-pose) — impecables con los bailes.
   "Masculine", "Feminine",
-  "GothicGirl", "Cyberpunk", "Julia", "CyberMale", "Andra", "Harry", "Chen",
-  // Mixamo (convertidos con FBX2glTF)
-  "Ch01", "Ch02", "Ch13", "Ch16", "Ch17", "Ch22",
-  "Ch26", "Ch27", "Ch37", "Ch38", "Ch49"
+  "GothicGirl", "Cyberpunk", "Julia", "CyberMale", "Andra", "Harry", "Chen"
 ];
-// 20 cuerpos. Texturas descartadas (la obra los pinta gris clay); solo importa forma y rig.
+// Los 11 cuerpos Mixamo (Ch##) quedaron guardados en _local/bodies_mixamo/ para uso futuro.
+// Para reactivarlos: copiarlos de vuelta a assets/bodies/ y agregar sus nombres acá.

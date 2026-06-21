@@ -218,6 +218,10 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <label><input type="checkbox" id="l-grade"> grade <span class="val" id="v-gradei">100</span></label>
       <input id="s-gradei" type="range" min="0" max="1" step="0.01" value="1">
     </div>
+    <div class="ctl">
+      <label>blur general <span class="val" id="v-blur">0</span></label>
+      <input id="s-blur" type="range" min="0" max="1" step="0.01" value="0">
+    </div>
     <label class="chk"><input type="checkbox" id="l-dither"> dither anti-banding</label>
     <label class="chk"><input type="checkbox" id="l-fps"> mostrar FPS</label>
 
@@ -331,6 +335,7 @@ let nieblaDens  = (cfg.nieblaDens  ?? 50) / 100;   // densidad de niebla
 let hazeBri     = (cfg.brumaBrillo ?? 40) / 100;   // brillo del gris "bruma" (0 = oscuro → atmósfera en negro)
 let bloomFuerza = (cfg.bloomFuerza ?? 50) / 100;   // fuerza del bloom
 let gradeInt    = (cfg.gradeInt    ?? 100) / 100;  // intensidad del grade
+let blurGen     = (cfg.blurGen     ?? 0)  / 100;   // blur general del render (0 = nítido); se aplica como filter CSS al canvas
 // qué parámetros entran al botón RANDOM (configurable en config.html)
 const DEFAULT_RANDOM = { cuerpos:true, coreografia:true, cambioBaile:true, formacion:true, rotacionAzar:true, tamanoAzar:true, luzGeneral:true };
 let randomInc = Object.assign({}, DEFAULT_RANDOM, cfg.random || {});
@@ -422,6 +427,9 @@ function updatePost(){
   bloomPass.strength = bloomFuerza * 1.6;
   scene.fog.density = lNiebla ? (FOG_BASE + nieblaDens * 0.10) : FOG_BASE;
 }
+// blur general: mismo tipo de desenfoque que el panel, aplicado al canvas entero (0 = nítido).
+// Máx ~40px; el panel (DOM aparte) no se desenfoca, solo la imagen 3D.
+function applyBlur(){ renderer.domElement.style.filter = blurGen > 0.001 ? `blur(${(blurGen * 40).toFixed(1)}px)` : 'none'; }
 
 // ---------------------------------------------------------------- lights
 const hemi = new THREE.HemisphereLight(0x404a66, 0x05060a, 0.30);
@@ -1005,6 +1013,7 @@ $('l-bloom').onchange  = e => { lBloom  = e.target.checked; updatePost(); };
 $('s-bloomi').oninput  = e => { bloomFuerza = +e.target.value; $('v-bloomi').textContent = Math.round(bloomFuerza*100); updatePost(); };
 $('l-grade').onchange  = e => { lGrade  = e.target.checked; updatePost(); };
 $('s-gradei').oninput  = e => { gradeInt = +e.target.value; $('v-gradei').textContent = Math.round(gradeInt*100); updatePost(); };
+$('s-blur').oninput    = e => { blurGen = +e.target.value; $('v-blur').textContent = Math.round(blurGen*100); applyBlur(); };
 $('l-dither').onchange = e => { lDither = e.target.checked; updatePost(); };
 $('l-fps').onchange    = e => { showFps = e.target.checked; fpsEl.style.display = showFps ? 'block' : 'none'; };
 $('s-mov').oninput = e => { animSpeed = +e.target.value * 2; $('v-mov').textContent = animSpeed.toFixed(1); };
@@ -1076,6 +1085,7 @@ function syncUI(){
   set('s-haze', hazeBri);      $('v-haze').textContent   = Math.round(hazeBri*100);
   set('s-bloomi', bloomFuerza);$('v-bloomi').textContent = Math.round(bloomFuerza*100);
   set('s-gradei', gradeInt);   $('v-gradei').textContent = Math.round(gradeInt*100);
+  set('s-blur', blurGen);      $('v-blur').textContent   = Math.round(blurGen*100);
   if (fpsEl) fpsEl.style.display = showFps ? 'block' : 'none';
 }
 // ---- sacudir el teléfono → nuevo RANDOM ----
@@ -1108,6 +1118,7 @@ loadAssets().then(() => {
   $('m-dances').textContent = allClips.length;
   randomizeAll();             // siempre arranca con una composición aleatoria (dado inicial)
   updatePost();
+  applyBlur();
   if (cfg.piso){ grid.visible = true; floor.visible = true; }
   setStrobe(!!cfg.estrobo);    // also sets disco/strobe light levels via refreshStatic
   if (cfg.sonido) $('sound').click();   // begins on first click due to autoplay rules

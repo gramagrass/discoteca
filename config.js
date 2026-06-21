@@ -39,6 +39,7 @@ window.CONFIG = {
   brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
   bloomFuerza:        50,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
+  blurGen:            0,    // blur general del render (0 = nítido)
 
   // modo
   estrobo:            false,    // arrancar en modo estrobo

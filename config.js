@@ -6,7 +6,7 @@ window.CONFIG = {
 
   // cuerpos
   cuerpos:            13,    // nº de cuerpos (1–30)
-  familia:            "todas",    // pool de movimientos para las generaciones
+  familia:            "dance",    // pool de movimientos para las generaciones
   coreografia:        100,    // 0 = todos el mismo baile · 100 = cada quien el suyo
   cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
   movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
@@ -16,7 +16,7 @@ window.CONFIG = {
   // espacio
   formacion:          "aleatorio",    // aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral
   rotacionAzar:       100,    // 0 = miran igual · 100 = al azar
-  cercania:           14,    // 0 = masa apretada · 100 = dispersos
+  cercania:           10,    // 0 = masa apretada · 100 = dispersos
   tamanoAzar:         0,    // 0 = igual tamaño · 100 = de mano a gigante
 
   // cámara
@@ -39,6 +39,7 @@ window.CONFIG = {
   brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
   bloomFuerza:        50,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
+  blurGen:            0,    // desenfoque general del render (0 = nítido)
 
   // modo
   estrobo:            false,    // arrancar en modo estrobo

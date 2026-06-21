@@ -749,13 +749,13 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const smooth = k => k * k * (3 - 2 * k);
 function newFly(fa, fe, fr){
   return { fromAz: fa, fromEl: fe, fromRad: fr,
-           toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(1.5, 12), t: 0 };
+           toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(1.1, 7), t: 0 };   // tope lejano más cerca (antes 12)
 }
 function newTvShot(now){
   cam.tvEnd  = now + lerp(11000, 450, camSpeed * camSpeed);   // extremo bajo: cortes muy lentos
   cam.tvAz   = Math.random() * TAU;
   cam.tvEl   = rf(0.08, 0.95);
-  cam.tvRad  = rf(1.2, 11);
+  cam.tvRad  = rf(1.1, 7);   // tope lejano más cerca (antes 11)
   cam.tvZoom = rf(-0.5, 0.7);                      // zoom lento dentro de la toma
 }
 let dragging = false, lastX = 0, lastY = 0;
@@ -769,7 +769,7 @@ addEventListener('pointermove', e => {
 });
 renderer.domElement.addEventListener('wheel', e => {
   e.preventDefault();
-  cam.rad = Math.max(0.4, Math.min(24, cam.rad + e.deltaY * 0.01));   // permite acercarse mucho a la masa
+  cam.rad = Math.max(0.4, Math.min(13, cam.rad + e.deltaY * 0.01));   // 0.4 = detalle muy cercano · 13 = tope lejano (antes 24)
 }, { passive:false });
 
 // ---------------------------------------------------------------- audio (synthesised kick + hat — original, no copyright)
@@ -950,7 +950,7 @@ function tick(now){
       fAz = cam.baseAz + Math.sin(t * 0.25) * 0.12;
   }
   fEl  = Math.max(0.04, Math.min(1.5, fEl));
-  fRad = Math.max(0.4,  Math.min(28,  fRad));
+  fRad = Math.max(0.4,  Math.min(13,  fRad));   // tope lejano duro (antes 28); 0.4 = detalle cercano
   cam.curAz = fAz; cam.curEl = fEl; cam.curRad = fRad;
   camera.position.set(Math.cos(fAz) * Math.cos(fEl) * fRad, 1.3 + Math.sin(fEl) * fRad, Math.sin(fAz) * Math.cos(fEl) * fRad);
   camera.lookAt(0, lookY, 0);

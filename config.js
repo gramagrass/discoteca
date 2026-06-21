@@ -66,7 +66,7 @@ window.CONFIG = {
     cercania:         false,
     tamanoAzar:       true,
     vistaCamara:      false,
-    luzGeneral:       false,
+    luzGeneral:       true,
     colorLuz:         false,
     bpm:              false,
     estroboVel:       false,

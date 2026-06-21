@@ -28,7 +28,7 @@ window.CONFIG = {
 
   // luz / estrobo
   luzGeneral:         -100,    // -100..100 (bajo cero: cuerpos oscuros translúcidos)
-  colorLuz:           "#ffffff",    // color del estrobo / luz
+  colorLuz:           "#ff0000",    // color del estrobo / luz
   bpm:                112,    // pulso de luces/audio
   estroboVel:         7.5,    // destellos por segundo
   estroboIntensidad:  1.6,    // fuerza del destello (0 = negro)

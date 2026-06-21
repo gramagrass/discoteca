@@ -28,7 +28,7 @@ window.CONFIG = {
 
   // luz / estrobo
   luzGeneral:         -100,    // -100..100 (bajo cero: cuerpos oscuros translúcidos)
-  colorLuz:           "#ffffff",    // color del estrobo / luz
+  colorLuz:           "#ff0000",    // color del estrobo / luz
   bpm:                112,    // pulso de luces/audio
   estroboVel:         7.5,    // destellos por segundo
   estroboIntensidad:  1.6,    // fuerza del destello (0 = negro)
@@ -39,13 +39,12 @@ window.CONFIG = {
   brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
   bloomFuerza:        50,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
-  blurGen:            0,    // blur general del render (0 = nítido)
 
   // modo
   estrobo:            false,    // arrancar en modo estrobo
   sonido:             false,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
-  autoRandom:         false,    // re-roll automático cada cierto tiempo
+  autoRandom:         true,    // re-roll automático cada cierto tiempo
   panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto)
   sacudir:            true,    // sacudir el teléfono dispara un RANDOM
   capaNiebla:         true,    // niebla atmosférica (INSIDE)
@@ -64,7 +63,7 @@ window.CONFIG = {
     noise:            false,
     formacion:        true,
     rotacionAzar:     true,
-    cercania:         true,
+    cercania:         false,
     tamanoAzar:       true,
     vistaCamara:      false,
     luzGeneral:       false,
@@ -72,6 +71,6 @@ window.CONFIG = {
     bpm:              false,
     estroboVel:       false,
     estroboIntensidad:false,
-    luzBase:          false
+    luzBase:          true
   }
 };

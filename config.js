@@ -64,7 +64,7 @@ window.CONFIG = {
     noise:            false,
     formacion:        true,
     rotacionAzar:     true,
-    cercania:         false,
+    cercania:         true,
     tamanoAzar:       true,
     vistaCamara:      false,
     luzGeneral:       false,

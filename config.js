@@ -39,13 +39,12 @@ window.CONFIG = {
   brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
   bloomFuerza:        50,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
-  blurGen:            0,    // blur general del render (0 = nítido)
 
   // modo
   estrobo:            false,    // arrancar en modo estrobo
   sonido:             false,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
-  autoRandom:         false,    // re-roll automático cada cierto tiempo
+  autoRandom:         true,    // re-roll automático cada cierto tiempo
   panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto)
   sacudir:            true,    // sacudir el teléfono dispara un RANDOM
   capaNiebla:         true,    // niebla atmosférica (INSIDE)

@@ -227,7 +227,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <select id="s-dithermode">
         <option value="off">off</option>
         <option value="fino">fino (anti-banding)</option>
-        <option value="organico">orgánico b/n</option>
+        <option value="organico">blue-noise b/n</option>
       </select>
     </div>
     <div class="ctl">
@@ -411,15 +411,8 @@ const GradeShader = {
     uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount; uniform float uGrade;
     uniform float uDitherMode; uniform float uDScale; uniform float uDContrast;
     varying vec2 vUv;
-    float hash21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-    // value noise suave → manchas orgánicas (no la rejilla regular de un Bayer)
-    float vnoise(vec2 p){
-      vec2 i = floor(p), f = fract(p);
-      float a = hash21(i), b = hash21(i + vec2(1.0, 0.0));
-      float c = hash21(i + vec2(0.0, 1.0)), d = hash21(i + vec2(1.0, 1.0));
-      vec2 u = f * f * (3.0 - 2.0 * f);
-      return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-    }
+    // interleaved gradient noise (Jimenez): umbral tipo blue-noise, barato y estable en pantalla
+    float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
     void main(){
       vec3 col = texture2D(tDiffuse, vUv).rgb;
       if (uGrade > 0.001){                        // paleta apagada y fría tipo INSIDE (intensidad uGrade)
@@ -431,15 +424,12 @@ const GradeShader = {
       }
       float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
       col += (g - 0.5) * 0.14 * uAmount;          // grano
-      if (uDitherMode > 1.5){                     // ── dither orgánico b/n, alto contraste, pocos grises ──
-        vec2 p = vUv * uResolution;
+      if (uDitherMode > 1.5){                     // ── dither blue-noise b/n, alto contraste, estable en pantalla ──
+        float cell = floor(mix(1.0, 4.0, uDScale));            // tamaño de celda en px (escala: + grande = más chunky)
+        vec2 p = floor(gl_FragCoord.xy / cell);                // anclado a la pantalla → no hierve en movimiento
         float lum = dot(col, vec3(0.299, 0.587, 0.114));
-        lum = clamp((lum - 0.5) * uDContrast + 0.5, 0.0, 1.0);   // más contraste
-        float sc = mix(0.20, 0.025, uDScale);     // escala de la mancha (slider: + grande = manchas grandes)
-        float org = vnoise(p * sc + uTime * 0.04);              // umbral orgánico (blobs lentos)
-        org = org * 0.62 + hash21(p + floor(uTime * 10.0)) * 0.38; // rompe el patrón → grano vivo
-        float q = step(org, lum);                 // 1-bit puro: el gris surge de la densidad del dither
-        col = vec3(q);
+        lum = clamp((lum - 0.5) * uDContrast + 0.5, 0.0, 1.0); // más contraste
+        col = vec3(step(ign(p), lum));            // 1-bit: el gris surge de la densidad del patrón blue-noise
       } else if (uDitherMode > 0.5){              // fino anti-banding (lo de antes)
         float d = fract(sin(dot(vUv * uResolution + uTime * 0.5, vec2(39.346, 11.135))) * 24634.633);
         col += (d - 0.5) * (2.0 / 255.0);

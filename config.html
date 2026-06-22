@@ -141,7 +141,7 @@ const DEFAULTS = {
   estrobo:false, sonido:false, piso:false, autoRandom:false, autoRandomSeg:10,
   capaNiebla:false, capaGrade:false, capaBloom:false, fps:false,
   nieblaDens:50, brumaBrillo:40, bloomFuerza:50, gradeInt:100, blurGen:0,
-  ditherModo:'off', ditherEscala:50, ditherContraste:60,
+  ditherModo:'off', ditherEscala:30, ditherContraste:60,
   panel:true, sacudir:true,
 };
 const cur = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
@@ -185,7 +185,7 @@ const SECTIONS = [
     ['gradeInt','grade intensidad',0,100,1,'intensidad del grade frío'],
     ['blurGen','blur general',0,100,1,'desenfoque general del render (0 = nítido)'],
     ['ditherModo','dither modo','select',['off','fino','organico','bayer'],0,'off | fino (anti-banding) | organico (blue-noise b/n) | bayer (ordenado 1px)'],
-    ['ditherEscala','dither escala',0,100,1,'tamaño de celda del dither (0 = 1px fino · 100 = chunky)'],
+    ['ditherEscala','dither escala',0,100,1,'tamaño de punto del dither (0 = 1px denso · 100 = 3px)'],
     ['ditherContraste','dither contraste',0,100,1,'contraste del dither orgánico'],
   ]],
   ['modo', [

@@ -426,32 +426,34 @@ const GradeShader = {
       if (i == 12) t = 1.0000; if (i == 13) t = 0.5000; if (i == 14) t = 0.8750; if (i == 15) t = 0.3750;
       return t;
     }
-    void main(){
-      vec3 col = texture2D(tDiffuse, vUv).rgb;
-      if (uGrade > 0.001){                        // paleta apagada y fría tipo INSIDE (intensidad uGrade)
-        float l = dot(col, vec3(0.299, 0.587, 0.114));
-        vec3 g = mix(col, vec3(l), 0.35);         // desaturar
+    vec3 applyGrade(vec3 c){                       // paleta apagada y fría tipo INSIDE (intensidad uGrade)
+      if (uGrade > 0.001){
+        float l = dot(c, vec3(0.299, 0.587, 0.114));
+        vec3 g = mix(c, vec3(l), 0.35);           // desaturar
         g *= vec3(0.90, 0.97, 1.08);              // tinte frío
         g = (g - 0.5) * 1.06 + 0.5;               // contraste suave
-        col = mix(col, clamp(g, 0.0, 1.0), uGrade);
+        c = mix(c, clamp(g, 0.0, 1.0), uGrade);
       }
-      float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
-      col += (g - 0.5) * 0.14 * uAmount;          // grano
-      if (uDitherMode > 2.5){                     // ── Bayer ordenado b/n, trama clásica de 1px ──
-        float cell = floor(mix(1.0, 4.0, uDScale));            // tamaño de celda en px (escala: 0 = 1px)
-        vec2 p = floor(gl_FragCoord.xy / cell);                // anclado a la grilla de píxeles
-        float lum = dot(col, vec3(0.299, 0.587, 0.114));
-        lum = clamp((lum - 0.5) * uDContrast + 0.5, 0.0, 1.0); // más contraste
-        col = vec3(lum < bayer4(p) ? 0.0 : 1.0);  // 1-bit por matriz ordenada
-      } else if (uDitherMode > 1.5){              // ── dither blue-noise b/n, alto contraste, estable en pantalla ──
-        float cell = floor(mix(1.0, 4.0, uDScale));            // tamaño de celda en px (escala: + grande = más chunky)
-        vec2 p = floor(gl_FragCoord.xy / cell);                // anclado a la pantalla → no hierve en movimiento
-        float lum = dot(col, vec3(0.299, 0.587, 0.114));
-        lum = clamp((lum - 0.5) * uDContrast + 0.5, 0.0, 1.0); // más contraste
-        col = vec3(step(ign(p), lum));            // 1-bit: el gris surge de la densidad del patrón blue-noise
-      } else if (uDitherMode > 0.5){              // fino anti-banding (lo de antes)
-        float d = fract(sin(dot(vUv * uResolution + uTime * 0.5, vec2(39.346, 11.135))) * 24634.633);
-        col += (d - 0.5) * (2.0 / 255.0);
+      return c;
+    }
+    void main(){
+      vec3 col = applyGrade(texture2D(tDiffuse, vUv).rgb);
+      if (uDitherMode > 1.5){                      // ── dither de puntos: blue-noise (2) o Bayer (3) ──
+        float cellPx = floor(mix(1.0, 3.0, uDScale));          // px por punto: 1 = el más pequeño/denso
+        vec2 grid   = floor(uResolution / cellPx);             // nº de celdas (indep. del device pixel ratio)
+        vec2 cellId = floor(vUv * grid);
+        vec3 cc     = applyGrade(texture2D(tDiffuse, (cellId + 0.5) / grid).rgb);  // muestra en el centro → punto limpio
+        float lum   = dot(cc, vec3(0.299, 0.587, 0.114));
+        lum = clamp((lum - 0.5) * uDContrast + 0.5, 0.0, 1.0); // contraste suave (no aplasta la trama)
+        float thr = (uDitherMode > 2.5) ? bayer4(cellId) : ign(cellId);
+        col = vec3(lum < thr ? 0.0 : 1.0);         // 1-bit
+      } else {
+        float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
+        col += (g - 0.5) * 0.14 * uAmount;         // grano
+        if (uDitherMode > 0.5){                    // fino anti-banding (lo de antes)
+          float d = fract(sin(dot(vUv * uResolution + uTime * 0.5, vec2(39.346, 11.135))) * 24634.633);
+          col += (d - 0.5) * (2.0 / 255.0);
+        }
       }
       gl_FragColor = vec4(col, 1.0);
     }`,
@@ -472,7 +474,7 @@ function updatePost(){
   const dmode = ditherModo === 'bayer' ? 3 : ditherModo === 'organico' ? 2 : ditherModo === 'fino' ? 1 : 0;
   gradePass.uniforms.uDitherMode.value = dmode;
   gradePass.uniforms.uDScale.value     = ditherEscala;
-  gradePass.uniforms.uDContrast.value  = 1.0 + ditherContraste * 2.5;   // 1.0 .. 3.5
+  gradePass.uniforms.uDContrast.value  = 0.6 + ditherContraste * 1.4;   // 0.6 .. 2.0 (suave: la trama sigue visible en todo el rango)
   gradePass.enabled = (noise > 0.001) || lGrade || dmode > 0;
   bloomPass.enabled = lBloom;
   bloomPass.strength = bloomFuerza * 1.6;

@@ -40,7 +40,7 @@ window.CONFIG = {
   bloomFuerza:        50,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
   blurGen:            0,    // desenfoque general del render (0 = nítido)
-  ditherModo:         "off",    // off | fino (anti-banding) | organico (blue-noise b/n, alto contraste)
+  ditherModo:         "off",    // off | fino (anti-banding) | organico (blue-noise b/n) | bayer (ordenado 1px)
   ditherEscala:       50,    // tamaño de celda del dither (0 = 1px fino · 100 = chunky)
   ditherContraste:    60,    // contraste del dither orgánico
 

@@ -228,6 +228,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
         <option value="off">off</option>
         <option value="fino">fino (anti-banding)</option>
         <option value="organico">blue-noise b/n</option>
+        <option value="bayer">bayer (ordenado, 1px)</option>
       </select>
     </div>
     <div class="ctl">
@@ -413,6 +414,18 @@ const GradeShader = {
     varying vec2 vUv;
     // interleaved gradient noise (Jimenez): umbral tipo blue-noise, barato y estable en pantalla
     float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+    // Bayer 4x4 ordenado: trama clásica (tipo periódico / 8-bit), umbral por celda de 1px
+    float bayer4(vec2 q){
+      int x = int(mod(q.x, 4.0));
+      int y = int(mod(q.y, 4.0));
+      int i = x + y * 4;
+      float t = 0.0;
+      if (i ==  0) t = 0.0625; if (i ==  1) t = 0.5625; if (i ==  2) t = 0.1875; if (i ==  3) t = 0.6875;
+      if (i ==  4) t = 0.8125; if (i ==  5) t = 0.3125; if (i ==  6) t = 0.9375; if (i ==  7) t = 0.4375;
+      if (i ==  8) t = 0.2500; if (i ==  9) t = 0.7500; if (i == 10) t = 0.1250; if (i == 11) t = 0.6250;
+      if (i == 12) t = 1.0000; if (i == 13) t = 0.5000; if (i == 14) t = 0.8750; if (i == 15) t = 0.3750;
+      return t;
+    }
     void main(){
       vec3 col = texture2D(tDiffuse, vUv).rgb;
       if (uGrade > 0.001){                        // paleta apagada y fría tipo INSIDE (intensidad uGrade)
@@ -424,7 +437,13 @@ const GradeShader = {
       }
       float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
       col += (g - 0.5) * 0.14 * uAmount;          // grano
-      if (uDitherMode > 1.5){                     // ── dither blue-noise b/n, alto contraste, estable en pantalla ──
+      if (uDitherMode > 2.5){                     // ── Bayer ordenado b/n, trama clásica de 1px ──
+        float cell = floor(mix(1.0, 4.0, uDScale));            // tamaño de celda en px (escala: 0 = 1px)
+        vec2 p = floor(gl_FragCoord.xy / cell);                // anclado a la grilla de píxeles
+        float lum = dot(col, vec3(0.299, 0.587, 0.114));
+        lum = clamp((lum - 0.5) * uDContrast + 0.5, 0.0, 1.0); // más contraste
+        col = vec3(lum < bayer4(p) ? 0.0 : 1.0);  // 1-bit por matriz ordenada
+      } else if (uDitherMode > 1.5){              // ── dither blue-noise b/n, alto contraste, estable en pantalla ──
         float cell = floor(mix(1.0, 4.0, uDScale));            // tamaño de celda en px (escala: + grande = más chunky)
         vec2 p = floor(gl_FragCoord.xy / cell);                // anclado a la pantalla → no hierve en movimiento
         float lum = dot(col, vec3(0.299, 0.587, 0.114));
@@ -450,7 +469,7 @@ composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final
 function updatePost(){
   gradePass.uniforms.uAmount.value = noise;
   gradePass.uniforms.uGrade.value  = lGrade ? gradeInt : 0;
-  const dmode = ditherModo === 'organico' ? 2 : ditherModo === 'fino' ? 1 : 0;
+  const dmode = ditherModo === 'bayer' ? 3 : ditherModo === 'organico' ? 2 : ditherModo === 'fino' ? 1 : 0;
   gradePass.uniforms.uDitherMode.value = dmode;
   gradePass.uniforms.uDScale.value     = ditherEscala;
   gradePass.uniforms.uDContrast.value  = 1.0 + ditherContraste * 2.5;   // 1.0 .. 3.5

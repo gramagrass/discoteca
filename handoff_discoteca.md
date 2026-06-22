@@ -21,23 +21,26 @@ Desplegada en **disco.grama.co** vía GitHub Pages.
 - **`config.html`** — editor visual de config + checkboxes de RANDOM por parámetro + guardado a GitHub.
 - **`models.js`** — `window.MODELS = [...]` manifiesto de cuerpos (nombres sin `.glb`).
 - **`motions.js`** — `window.MOTIONS = {familia: [nombres]}` manifiesto de movimientos.
-- **`assets/bodies/*.glb`** — 20 cuerpos (~32MB).
+- **`assets/bodies/*.glb`** — 7 cuerpos RPM activos (~7MB).
 - **`assets/motions/{dance,locomotion,idle,expression,fisico}/*.glb`** — clips.
 - **`backup-v1/`** — v1 congelada (incl. `assets/dances/` con los 15 bailes originales RPM).
 - **`_local/`** — **gitignored** (NO se publica): herramientas y descargas crudas.
 
-## 3. Cuerpos (20)
-Todos comparten el rig RPM/Mixamo (estructura idéntica; nombres de hueso "bare": `Hips`,
-`Spine`, `LeftArm`…). El pipeline **renombra** cualquier prefijo `mixamorig\d*:?` → bare,
-**descarta texturas** (la obra los pinta gris "clay") y la obra **normaliza la altura** de cada uno.
+## 3. Cuerpos — 7 activos (solo RPM)
+Todos comparten el rig RPM/Wolf3D (nombres de hueso "bare": `Hips`, `Spine`, `LeftArm`…). El
+pipeline **renombra** cualquier prefijo `mixamorig\d*:?` → bare, **descarta texturas** (la obra los
+pinta gris "clay") y la obra **normaliza la altura** de cada uno.
 
-- **RPM nativos (A-pose, los más limpios con los bailes):**
-  - `Masculine`, `Feminine` (RPM TPose originales).
-  - `GothicGirl`, `Cyberpunk`, `Julia`, `CyberMale`, `Andra`, `Harry`, `Chen` — avatares RPM
-    bajados de Sketchfab por el usuario (estaban en `_local/rpm_models/*/source/*.glb`).
-- **Mixamo (T-pose):** `Ch01,Ch02,Ch13,Ch16,Ch17,Ch22,Ch26,Ch27,Ch37,Ch38,Ch49` — personajes de
-  Mixamo con malla, bajados por el usuario como FBX (`_local/characters/`), convertidos con
-  **FBX2glTF** (ver §6) y procesados a GLB clay (~2MB c/u).
+**Decisión del usuario:** quedarse SOLO con cuerpos RPM (A-pose) porque lucen impecables con los
+bailes; los Mixamo (T-pose) tenían leve tensión de hombro. Los Mixamo se apartaron (no borrados).
+
+- **Activos (7, en `assets/bodies/`):** `Masculine`, `Feminine` (RPM TPose originales) +
+  `GothicGirl`, `Julia`, `Andra`, `Harry`, `Chen` (avatares RPM bajados de Sketchfab por el usuario;
+  fuentes en `_local/rpm_models/*/source/*.glb`).
+- **Apartados para uso futuro (NO se cargan):**
+  - `_local/bodies_mixamo/` → los 11 Mixamo `Ch01…Ch49` (convertidos con FBX2glTF, ver §6).
+  - `_local/bodies_unused/` → `Cyberpunk` y `CyberMale` (avatares RPM que el usuario sacó: "weird").
+- Reactivar uno: copiar su `.glb` a `assets/bodies/` y agregar el nombre a `models.js`.
 
 ## 4. Movimientos (manifiesto: 112 clips en 5 familias)
 `dance:15  locomotion:34  idle:18  expression:15  fisico:30`
@@ -68,6 +71,12 @@ Todos comparten el rig RPM/Mixamo (estructura idéntica; nombres de hueso "bare"
   RPM y con leve tensión de hombro en Mixamo. **No reintentar "rest-pose compensation".**
 - **Material clay** uniforme (`0xc9c9cd`, roughness alto) sobre todas las mallas: la variedad viene de
   la FORMA/silueta, no del color/textura. Por eso da igual perder las texturas al convertir.
+- **Blur general** (`blurGen`, default 0): slider en panel (sección render) + `config.js` + editor.
+  Aplica `filter: blur(blurGen*40 px)` al canvas (`renderer.domElement`) vía `applyBlur()` — mismo
+  desenfoque que el panel, solo sobre la imagen 3D (la UI queda nítida). 0 = nítido.
+- **Zoom de cámara (radio):** mín 0.4 (detalle cercano, conservar) — máx duro 13 (antes 28). Modos
+  automáticos `sobrevuelo`/`tv` acotados a `rf(1.1, 7)` (antes ~12/11) para evitar tomas muy lejanas.
+  Rueda del mouse: 0.4–13. Si se quiere aún más cercano de promedio, bajar el `7`.
 
 ## 6. Pipeline de conversión in-sandbox (RECREAR — los scripts viven en /tmp y se borran)
 Three.js puede parsear FBX y exportar GLB en Node con shims de DOM. Setup:
@@ -106,15 +115,16 @@ globalThis.document={createElementNS:()=>imgStub(),createElement:t=>t==='canvas'
 
 ## 7. Restricciones del entorno (sandbox)
 - ARM: no x86 binarios, no GPU, **no render testing**.
-- El mount del usuario: **no se pueden borrar archivos** (`rm` → "Operation not permitted"). Por eso
-  quedan GLB viejos en `assets/motions/*`; el manifiesto los ignora.
+- El mount del usuario: `rm` da "Operation not permitted" hasta habilitar el borrado con la tool
+  **`mcp__cowork__allow_cowork_file_delete`** (ya se habilitó en esta carpeta). Antes de borrar,
+  conviene copiar a `_local/…` por las dudas. Aún quedan GLB viejos en `assets/motions/*` (clips
+  Mixamo sin usar); el manifiesto los ignora.
 - `_local/` está en `.gitignore` (con `.DS_Store`, `node_modules/`) — no llega al sitio.
 
 ## 8. Pendientes / próximos pasos posibles
-- **Carga de subconjunto rotativo:** con 20 cuerpos (~32MB) + 112 clips (~20MB) el primer load es
-  algo pesado. Plan (anotado por el usuario): cargar al azar N cuerpos por sesión (ej. 6 de 20),
-  más liviano y la multitud cambia en cada recarga. NO implementado. La carga es resiliente
-  (`loadSafe` por cuerpo: si uno falla, se omite).
+- **Carga de subconjunto rotativo:** con 7 cuerpos (~7MB) ya no es urgente, pero el plan sigue:
+  cargar al azar N cuerpos por sesión para variar la multitud entre recargas. NO implementado.
+  La carga es resiliente (`loadSafe` por cuerpo: si uno falla, se omite).
 - **Más cuerpos:** la tubería soporta cualquier FBX Mixamo (vía FBX2glTF) o GLB RPM (Sketchfab/RPM
   creator). Quedan personajes Mixamo no-humanos (Mutant/robots/criaturas) por sumar si se quiere.
 - **Más bailes Mixamo:** si el usuario quiere recuperar también los 30 bailes Mixamo junto a los 15
@@ -129,5 +139,7 @@ globalThis.document={createElementNS:()=>imgStub(),createElement:t=>t==='canvas'
 - La obra ya está desplegada y funcionando en disco.grama.co.
 
 ---
-*Estado: 20 cuerpos (2 RPM orig + 7 RPM Sketchfab + 11 Mixamo) y 112 movimientos (dance=15 v1, resto
-Mixamo). Selector de familia dinámico. Clips solo-rotación + cuerpos envueltos y normalizados.*
+*Estado: 7 cuerpos RPM activos (Mixamo + 2 cyberpunk apartados en `_local/`) y 112 movimientos
+(dance=15 v1, resto Mixamo). Selector de familia dinámico. Clips solo-rotación + cuerpos envueltos y
+normalizados. Agregados: slider "blur general" (default 0) y límites de zoom (máx 13, mín 0.4;
+automáticos acotados a 1.1–7).*

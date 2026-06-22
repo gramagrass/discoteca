@@ -1,38 +1,79 @@
 /* ───────────────────────────────────────────────────────────────
-   discoteca — estado inicial
-   Edita los valores de la derecha y recarga la página (no hace falta
-   tocar nada más). Borra este archivo y la obra vuelve a sus valores
-   por defecto. Los porcentajes van de 0 a 100.
+   discoteca — estado inicial  (generado por config.html)
+   Reemplaza este archivo en la carpeta de discoteca.html y recarga.
    ─────────────────────────────────────────────────────────────── */
 window.CONFIG = {
-  cuerpos:           13,         // nº de cuerpos (1–30)
-  bpm:               112,        // pulso de luces/audio (70–140)
-  luzGeneral:        98,         // -100..100 (bajo cero: cuerpos negros translúcidos teñidos por la luz)
-  colorLuz:          "#ffffff",  // color del estrobo / luz
-  rotacionAzar:      100,        // hacia dónde miran: 0 = igual, 100 = al azar
-  cercania:          14,         // 0 = masa apretada, 100 = dispersos
-  tamanoAzar:        0,          // 0 = igual tamaño, 100 = de mano a gigante
-  estroboVel:        7.5,        // destellos por segundo (0.5–20)
-  estroboIntensidad: 1.6,        // fuerza del destello (0–12)
-  luzBase:           33,         // luz entre destellos 0–100 (0 = negro)
-  coreografia:       100,        // 0 = todos el mismo baile, 100 = cada quien el suyo
-  cambioBaile:       0,          // frecuencia de cambio de baile por modelo 0–100 (0 = nunca)
-  movimiento:        50,         // velocidad del baile 0–100 (50 = normal, 0 = quietos, 100 = 2×)
-  noise:             10,         // ruido de película 0–100 (0 = off)
 
-  // disposición: aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral
-  formacion:         "aleatorio",
+  // cuerpos
+  cuerpos:            13,    // nº de cuerpos (1–30)
+  familia:            "dance",    // pool de movimientos para las generaciones
+  coreografia:        100,    // 0 = todos el mismo baile · 100 = cada quien el suyo
+  cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
+  movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
+  noise:              10,    // ruido de película (0 = off)
+  autoRandomSeg:      10,    // intervalo del auto-random en segundos
 
-  estrobo:           true,       // arrancar en modo estrobo
-  sonido:            false,      // arrancar con sonido (suena al primer clic)
-  piso:              false,      // mostrar piso/rejilla
+  // espacio
+  formacion:          "aleatorio",    // aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral
+  rotacionAzar:       100,    // 0 = miran igual · 100 = al azar
+  cercania:           10,    // 0 = masa apretada · 100 = dispersos
+  tamanoAzar:         0,    // 0 = igual tamaño · 100 = de mano a gigante
 
-  // cámara — lee los valores en vivo en el panel ("cámara") y cópialos aquí
-  camAngulo:         293,        // ángulo horizontal en grados
-  camAltura:         2,          // altura de la cámara en grados
-  camZoom:           3.8,        // distancia (acercar/alejar)
+  // cámara
+  vistaCamara:        "tv",    // libre | orbita | sobrevuelo | tv | cenital | cenital_inclinada
+  camVelocidad:       40,    // velocidad de cámara (cortes / vuelo / órbita)
+  camAngulo:          293,    // ángulo horizontal en grados
+  camAltura:          2,    // altura de cámara en grados
+  camZoom:            3.8,    // distancia (menor = más cerca)
 
-  // modo de cámara: libre | orbita | sobrevuelo | tv | cenital | cenital_inclinada
-  vistaCamara:       "libre",
-  camVelocidad:      40          // velocidad de cámara 0–100 (cortes / vuelo / órbita)
+  // luz / estrobo
+  luzGeneral:         -100,    // -100..100 (bajo cero: cuerpos oscuros translúcidos)
+  colorLuz:           "#c2c2c2",    // color del estrobo / luz
+  bpm:                112,    // pulso de luces/audio
+  estroboVel:         7.5,    // destellos por segundo
+  estroboIntensidad:  1.6,    // fuerza del destello (0 = negro)
+  luzBase:            33,    // luz entre destellos (0 = negro)
+
+  // render · valores de capas
+  nieblaDens:         50,    // densidad de niebla
+  brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
+  bloomFuerza:        50,    // fuerza del bloom
+  gradeInt:           100,    // intensidad del grade frío
+  blurGen:            0,    // desenfoque general del render (0 = nítido)
+  ditherModo:         "off",    // off | fino (anti-banding) | organico (blue-noise b/n) | bayer (ordenado 1px)
+  ditherEscala:       30,    // tamaño de punto del dither (0 = 1px denso · 100 = 3px)
+  ditherContraste:    60,    // contraste del dither orgánico
+
+  // modo
+  estrobo:            false,    // arrancar en modo estrobo
+  sonido:             false,    // arrancar con sonido (suena al primer clic)
+  piso:               false,    // mostrar piso/rejilla
+  autoRandom:         true,    // re-roll automático cada cierto tiempo
+  panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto)
+  sacudir:            true,    // sacudir el teléfono dispara un RANDOM
+  capaNiebla:         true,    // niebla atmosférica (INSIDE)
+  capaGrade:          true,    // grade frío/apagado (INSIDE)
+  capaBloom:          false,    // bloom
+  fps:                false,    // mostrar FPS
+
+  // qué parámetros entran al botón RANDOM
+  random: {
+    cuerpos:          true,
+    familia:          false,
+    coreografia:      true,
+    cambioBaile:      true,
+    movimiento:       false,
+    noise:            false,
+    formacion:        true,
+    rotacionAzar:     true,
+    cercania:         false,
+    tamanoAzar:       true,
+    vistaCamara:      false,
+    luzGeneral:       true,
+    colorLuz:         false,
+    bpm:              false,
+    estroboVel:       false,
+    estroboIntensidad:false,
+    luzBase:          true
+  }
 };

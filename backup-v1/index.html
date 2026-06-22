@@ -17,7 +17,7 @@
   html,body{ margin:0; height:100%; background:#050507; overflow:hidden; }
   canvas{ display:block; }
   #ui{
-    position:fixed; inset:0; pointer-events:none;
+    position:fixed; inset:0; pointer-events:none; z-index:5;
     font-family:"JetBrains Mono", ui-monospace, monospace;
     color:var(--ink); user-select:none;
   }
@@ -37,9 +37,15 @@
     right:0; top:0; bottom:0; width:230px;
     display:flex; flex-direction:column; gap:13px; align-items:stretch;
     padding:18px 18px 24px; overflow-y:auto;
-    background:rgba(5,5,7,0.55); backdrop-filter:blur(8px);
+    background:rgba(5,5,7,0.85); backdrop-filter:blur(8px);
     border-left:1px solid var(--line);
   }
+  @media (min-width:760px){ #dock{ width:265px; } }   /* +15% en desktop */
+  .chk{
+    display:flex; align-items:center; gap:8px; cursor:pointer;
+    font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-dim);
+  }
+  .chk input{ accent-color:var(--accent); width:14px; height:14px; }
   #dock::-webkit-scrollbar{ width:6px; }
   #dock::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
   .ctl{ display:flex; flex-direction:column; gap:6px; }
@@ -93,20 +99,42 @@
     font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px; letter-spacing:0.1em;
     transition:opacity .5s ease;
   }
+  #fps{
+    position:fixed; top:14px; left:16px; z-index:9; display:none;
+    font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px;
+    color:var(--ink); background:rgba(5,5,7,0.5); padding:3px 8px; border:1px solid var(--line); border-radius:3px;
+  }
+  #panelBtn{
+    position:fixed; top:12px; right:12px; z-index:11; width:38px; height:38px;
+    font-size:16px; color:var(--ink); background:rgba(5,5,7,0.85); backdrop-filter:blur(8px);
+    border:1px solid var(--line); border-radius:6px; cursor:pointer; line-height:1;
+  }
+  #panelBtn:hover{ border-color:var(--ink); }
 </style>
 </head>
 <body>
 <div id="loader">cargando cuerpos y bailes…</div>
+<div id="fps">—</div>
+<button id="panelBtn" title="panel (H)">☰</button>
 
 <div id="ui">
   <div id="dock" class="panel">
     <div id="title">DISCO.GRAMA.CO</div>
-    <button id="reroll" class="primary">tirar dados ↻</button>
+    <button id="reroll" class="primary">RANDOM</button>
+    <label class="chk"><input type="checkbox" id="s-auto"> auto random</label>
+    <div class="ctl">
+      <label>cada <span class="val" id="v-autosec">10</span> s</label>
+      <input id="s-autosec" type="range" min="1" max="60" step="1" value="10">
+    </div>
 
     <div class="sec">cuerpos</div>
     <div class="ctl">
       <label>cuerpos <span class="val" id="v-count">16</span></label>
       <input id="s-count" type="range" min="1" max="30" step="1" value="16">
+    </div>
+    <div class="ctl">
+      <label>familia de movimiento</label>
+      <select id="s-fam"></select>
     </div>
     <div class="ctl">
       <label>coreografía <span class="val" id="v-choreo">100</span></label>
@@ -173,6 +201,46 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <input id="s-noise" type="range" min="0" max="1" step="0.01" value="0.10">
     </div>
 
+    <div class="sec">render · capas (INSIDE)</div>
+    <div class="ctl">
+      <label><input type="checkbox" id="l-niebla"> niebla <span class="val" id="v-niebla">50</span></label>
+      <input id="s-niebla" type="range" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="ctl">
+      <label>brillo bruma <span class="val" id="v-haze">40</span></label>
+      <input id="s-haze" type="range" min="0" max="1" step="0.01" value="0.4">
+    </div>
+    <div class="ctl">
+      <label><input type="checkbox" id="l-bloom"> bloom <span class="val" id="v-bloomi">50</span></label>
+      <input id="s-bloomi" type="range" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="ctl">
+      <label><input type="checkbox" id="l-grade"> grade <span class="val" id="v-gradei">100</span></label>
+      <input id="s-gradei" type="range" min="0" max="1" step="0.01" value="1">
+    </div>
+    <div class="ctl">
+      <label>blur general <span class="val" id="v-blur">0</span></label>
+      <input id="s-blur" type="range" min="0" max="1" step="0.01" value="0">
+    </div>
+    <div class="ctl">
+      <label>dither</label>
+      <select id="s-dithermode">
+        <option value="off">off</option>
+        <option value="fino">fino (anti-banding)</option>
+        <option value="organico">blue-noise b/n</option>
+        <option value="bayer">bayer (ordenado, 1px)</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>dither escala <span class="val" id="v-dscale">50</span></label>
+      <input id="s-dscale" type="range" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="ctl">
+      <label>dither contraste <span class="val" id="v-dcontrast">60</span></label>
+      <input id="s-dcontrast" type="range" min="0" max="1" step="0.01" value="0.6">
+    </div>
+    <label class="chk"><input type="checkbox" id="l-fps"> mostrar FPS</label>
+
     <div class="sec">luz / estrobo</div>
     <div class="ctl">
       <label>luz general <span class="val" id="v-bright">100</span></label>
@@ -203,7 +271,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
     <button id="grid">piso</button>
 
     <div class="foot">
-      <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> bailes · mocap real</span>
+      <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> movimientos · mocap real</span>
       <span><kbd>R</kbd> tirar dados · <kbd>espacio</kbd> nuevo reparto · <kbd>E</kbd> estrobo · <kbd>S</kbd> sonido</span>
       <span><kbd>C</kbd> cámara · <kbd>F</kbd> formación · <kbd>T</kbd> tamaño · <kbd>H</kbd> panel · <kbd>P</kbd> pantalla completa</span>
     </div>
@@ -211,6 +279,8 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
 </div>
 
 <!-- estado inicial editable; si falta, se usan los valores por defecto -->
+<script src="models.js"></script>
+<script src="motions.js"></script>
 <script src="config.js"></script>
 
 <script type="importmap">
@@ -227,6 +297,7 @@ import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const TAU = Math.PI * 2;
@@ -238,11 +309,14 @@ const DEFAULTS = {
   estroboVel: 7.5, estroboIntensidad: 4.0, luzBase: 0, coreografia: 100,
   estrobo: false, sonido: false, piso: false,
   camAngulo: 34, camAltura: 13, camZoom: 9.5,   // cámara (grados, grados, distancia)
-  vistaCamara: 'libre', camVelocidad: 40,       // modo de cámara + velocidad
+  vistaCamara: 'sobrevuelo', camVelocidad: 40,  // modo de cámara + velocidad
   cambioBaile: 0,                               // frecuencia de cambio de baile por modelo
   formacion: 'aleatorio',                       // disposición espacial
-  movimiento: 50,                               // velocidad del baile 0–100 (50 = normal, 100 = 2×)
+  familia: 'todas',                             // familia de movimiento activa: todas|dance|locomotion|expression|idle
+  movimiento: 5,                                // velocidad del baile 0–100 (50 = normal → aquí 0.1×)
   noise: 10,                                    // ruido de película 0–100 (0 = off)
+  autoRandom: false,                            // re-rollear solo cada cierto tiempo
+  autoRandomSeg: 10,                            // intervalo del auto-random en segundos (1–60)
 };
 const cfg = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 
@@ -263,25 +337,46 @@ let danceChange  = cfg.cambioBaile / 100;       // 0 = nunca · 1 = cambios frec
 let formation    = cfg.formacion;               // 'aleatorio' | 'cuadricula' | 'anillo' | 'circulo' | 'fila' | 'espiral'
 let animSpeed    = cfg.movimiento / 50;         // 0 = quietos · 1 = normal · 2 = doble
 let noise        = cfg.noise / 100;             // 0 = off · 1 = ruido fuerte
+let autoRandom   = !!cfg.autoRandom;            // re-roll automático cada cierto tiempo
+let autoRandomSec = cfg.autoRandomSeg;          // intervalo base (s)
+let nextAuto     = 0;                           // momento del próximo auto-random
+let activeFamily = cfg.familia || 'todas';      // pool de movimientos: todas|dance|idle|locomotion|expression
+// capas de render (INSIDE) — cada una con su interruptor, default off
+let lNiebla = !!cfg.capaNiebla, lGrade = !!cfg.capaGrade, lBloom = !!cfg.capaBloom;
+let ditherModo      = cfg.ditherModo ?? (cfg.capaDither ? 'fino' : 'off');   // off | fino | organico (retrocompat con capaDither)
+let ditherEscala    = (cfg.ditherEscala    ?? 50) / 100;   // escala de la mancha orgánica
+let ditherContraste = (cfg.ditherContraste ?? 60) / 100;   // contraste del dither orgánico
+let showFps = !!cfg.fps;
+const isMobile = matchMedia('(pointer: coarse)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+let panelVisible = isMobile ? false : (cfg.panel !== undefined ? !!cfg.panel : true);   // móvil: oculto siempre (botón ☰); escritorio: config
+const SHAKE = (cfg.sacudir ?? true);   // sacudir el teléfono = nuevo RANDOM
+let nieblaDens  = (cfg.nieblaDens  ?? 50) / 100;   // densidad de niebla
+let hazeBri     = (cfg.brumaBrillo ?? 40) / 100;   // brillo del gris "bruma" (0 = oscuro → atmósfera en negro)
+let bloomFuerza = (cfg.bloomFuerza ?? 50) / 100;   // fuerza del bloom
+let gradeInt    = (cfg.gradeInt    ?? 100) / 100;  // intensidad del grade
+let blurGen     = (cfg.blurGen     ?? 0)  / 100;   // blur general del render (0 = nítido); se aplica como filter CSS al canvas
+// qué parámetros entran al botón RANDOM (configurable en config.html)
+const DEFAULT_RANDOM = { cuerpos:true, coreografia:true, cambioBaile:true, formacion:true, rotacionAzar:true, tamanoAzar:true, luzGeneral:true };
+let randomInc = Object.assign({}, DEFAULT_RANDOM, cfg.random || {});
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
 const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
 
-// ---------------------------------------------------------------- asset urls (locales: obra autónoma; servidos desde ./assets)
-const BODY_URLS = [
-  './assets/bodies/Masculine.glb',
-  './assets/bodies/Feminine.glb',
-];
-const DANCE_NAMES = [
-  'M_Dances_001','M_Dances_002','M_Dances_003','M_Dances_004','M_Dances_005',
-  'M_Dances_006','M_Dances_007','M_Dances_008','M_Dances_009','M_Dances_011',
-  'F_Dances_001','F_Dances_004','F_Dances_005','F_Dances_006','F_Dances_007',
-];
-const DANCE_URLS = DANCE_NAMES.map(n => './assets/dances/' + n + '.glb');
+// ---------------------------------------------------------------- asset urls (locales; servidos desde ./assets)
+const MODELS = window.MODELS || ['Masculine', 'Feminine'];
+// cada entrada puede ser un nombre local (assets/bodies/NOMBRE.glb) o una URL completa
+// (p. ej. un avatar de Ready Player Me: https://models.readyplayer.me/ID.glb)
+const BODY_URLS = MODELS.map(n => /^https?:/.test(n) ? n : `./assets/bodies/${n}.glb`);
+// movimientos por familia, desde el manifiesto motions.js (dance/idle/locomotion/expression)
+const MOTIONS = window.MOTIONS || { dance: [], idle: [], locomotion: [], expression: [] };
+const MOTION_ENTRIES = [];
+for (const fam of Object.keys(MOTIONS))
+  for (const name of MOTIONS[fam])
+    MOTION_ENTRIES.push({ fam, name, url: `./assets/motions/${fam}/${name}.glb` });
 
 // ---------------------------------------------------------------- renderer / scene
 const renderer = new THREE.WebGLRenderer({ antialias:true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));   // móvil: cap más bajo (rendimiento)
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -291,39 +386,103 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x050507);
-scene.fog = new THREE.FogExp2(0x050507, 0.035);
+const bgColor = new THREE.Color(0x050507);
+scene.background = bgColor;
+const FOG_BASE = 0.035;   // densidad base; la capa niebla la sube según su slider
+scene.fog = new THREE.FogExp2(0x050507, FOG_BASE);
+// niebla NO destructiva: solo cambia la fog (densidad + color "bruma"); los cuerpos
+// conservan su material/sombras y el fondo sigue el modo (negro disponible → atmósfera en oscuro).
 
 const camera = new THREE.PerspectiveCamera(46, innerWidth/innerHeight, 0.1, 200);
 
-// ---------------------------------------------------------------- post: film noise (only grain)
-const NoiseShader = {
+// ---------------------------------------------------------------- post: grade + dither + grain (un solo pase)
+const GradeShader = {
   uniforms: {
     tDiffuse:    { value: null },
     uTime:       { value: 0 },
     uResolution: { value: new THREE.Vector2(innerWidth, innerHeight) },
-    uAmount:     { value: 0.5 },
+    uAmount:     { value: 0.5 },   // grano
+    uGrade:      { value: 0 },     // capa grade frío/apagado (INSIDE)
+    uDitherMode: { value: 0 },     // 0 = off · 1 = fino anti-banding · 2 = orgánico b/n
+    uDScale:     { value: 0.5 },   // escala de la mancha orgánica (0 = grano fino · 1 = manchas grandes)
+    uDContrast:  { value: 1.6 },   // contraste del dither orgánico
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount;
+    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount; uniform float uGrade;
+    uniform float uDitherMode; uniform float uDScale; uniform float uDContrast;
     varying vec2 vUv;
+    // interleaved gradient noise (Jimenez): umbral tipo blue-noise, barato y estable en pantalla
+    float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+    // Bayer 4x4 ordenado: trama clásica (tipo periódico / 8-bit), umbral por celda de 1px
+    float bayer4(vec2 q){
+      int x = int(mod(q.x, 4.0));
+      int y = int(mod(q.y, 4.0));
+      int i = x + y * 4;
+      float t = 0.0;
+      if (i ==  0) t = 0.0625; if (i ==  1) t = 0.5625; if (i ==  2) t = 0.1875; if (i ==  3) t = 0.6875;
+      if (i ==  4) t = 0.8125; if (i ==  5) t = 0.3125; if (i ==  6) t = 0.9375; if (i ==  7) t = 0.4375;
+      if (i ==  8) t = 0.2500; if (i ==  9) t = 0.7500; if (i == 10) t = 0.1250; if (i == 11) t = 0.6250;
+      if (i == 12) t = 1.0000; if (i == 13) t = 0.5000; if (i == 14) t = 0.8750; if (i == 15) t = 0.3750;
+      return t;
+    }
+    vec3 applyGrade(vec3 c){                       // paleta apagada y fría tipo INSIDE (intensidad uGrade)
+      if (uGrade > 0.001){
+        float l = dot(c, vec3(0.299, 0.587, 0.114));
+        vec3 g = mix(c, vec3(l), 0.35);           // desaturar
+        g *= vec3(0.90, 0.97, 1.08);              // tinte frío
+        g = (g - 0.5) * 1.06 + 0.5;               // contraste suave
+        c = mix(c, clamp(g, 0.0, 1.0), uGrade);
+      }
+      return c;
+    }
     void main(){
-      vec3 col = texture2D(tDiffuse, vUv).rgb;
-      float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
-      col += (g - 0.5) * 0.14 * uAmount;   // ruido animado
+      vec3 col = applyGrade(texture2D(tDiffuse, vUv).rgb);
+      if (uDitherMode > 1.5){                      // ── dither de puntos: blue-noise (2) o Bayer (3) ──
+        float cellPx = floor(mix(1.0, 3.0, uDScale));          // px por punto: 1 = el más pequeño/denso
+        vec2 grid   = floor(uResolution / cellPx);             // nº de celdas (indep. del device pixel ratio)
+        vec2 cellId = floor(vUv * grid);
+        vec3 cc     = applyGrade(texture2D(tDiffuse, (cellId + 0.5) / grid).rgb);  // muestra en el centro → punto limpio
+        float lum   = dot(cc, vec3(0.299, 0.587, 0.114));
+        lum = clamp((lum - 0.5) * uDContrast + 0.5, 0.0, 1.0); // contraste suave (no aplasta la trama)
+        float thr = (uDitherMode > 2.5) ? bayer4(cellId) : ign(cellId);
+        col = vec3(lum < thr ? 0.0 : 1.0);         // 1-bit
+      } else {
+        float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
+        col += (g - 0.5) * 0.14 * uAmount;         // grano
+        if (uDitherMode > 0.5){                    // fino anti-banding (lo de antes)
+          float d = fract(sin(dot(vUv * uResolution + uTime * 0.5, vec2(39.346, 11.135))) * 24634.633);
+          col += (d - 0.5) * (2.0 / 255.0);
+        }
+      }
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
-const composer = new EffectComposer(renderer);
+// render target multisampled → antialias dentro del post-proceso (bordes suaves)
+const _rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { samples: 4, type: THREE.HalfFloatType });
+const composer = new EffectComposer(renderer, _rt);
 composer.addPass(new RenderPass(scene, camera));
-const noisePass = new ShaderPass(NoiseShader);
-composer.addPass(noisePass);
-composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final, conserva el look
-function applyNoise(){
-  noisePass.enabled = noise > 0.001;
-  noisePass.uniforms.uAmount.value = noise;
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.75, 0.5, 0.45);  // capa bloom (umbral bajo = florece en tonos medios)
+bloomPass.enabled = false;
+composer.addPass(bloomPass);
+const gradePass = new ShaderPass(GradeShader);
+composer.addPass(gradePass);
+composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final
+function updatePost(){
+  gradePass.uniforms.uAmount.value = noise;
+  gradePass.uniforms.uGrade.value  = lGrade ? gradeInt : 0;
+  const dmode = ditherModo === 'bayer' ? 3 : ditherModo === 'organico' ? 2 : ditherModo === 'fino' ? 1 : 0;
+  gradePass.uniforms.uDitherMode.value = dmode;
+  gradePass.uniforms.uDScale.value     = ditherEscala;
+  gradePass.uniforms.uDContrast.value  = 0.6 + ditherContraste * 1.4;   // 0.6 .. 2.0 (suave: la trama sigue visible en todo el rango)
+  gradePass.enabled = (noise > 0.001) || lGrade || dmode > 0;
+  bloomPass.enabled = lBloom;
+  bloomPass.strength = bloomFuerza * 1.6;
+  scene.fog.density = lNiebla ? (FOG_BASE + nieblaDens * 0.10) : FOG_BASE;
 }
+// blur general: mismo tipo de desenfoque que el panel, aplicado al canvas entero (0 = nítido).
+// Máx ~40px; el panel (DOM aparte) no se desenfoca, solo la imagen 3D.
+function applyBlur(){ renderer.domElement.style.filter = blurGen > 0.001 ? `blur(${(blurGen * 40).toFixed(1)}px)` : 'none'; }
 
 // ---------------------------------------------------------------- lights
 const hemi = new THREE.HemisphereLight(0x404a66, 0x05060a, 0.30);
@@ -413,40 +572,71 @@ const FORMATIONS = ['aleatorio','cuadricula','anillo','anillo_fuera','circulo','
 const CAMMODES   = ['libre','orbita','sobrevuelo','tv','cenital','cenital_inclinada'];
 
 // restrict any colour to a darker, less-saturated range (the scene's tint palette)
-function clampColor(hex){
-  const c = new THREE.Color(hex); const hsl = {}; c.getHSL(hsl);
-  c.setHSL(hsl.h, Math.min(hsl.s, 0.5), Math.min(Math.max(hsl.l, 0.12), 0.55));
-  return c.getHex();
-}
+function clampColor(hex){ return hex; }   // sin restricción: "color luz" llega a blanco y a cualquier color
 
 let bodies = [];   // [{scene}]
-let clips  = [];   // [AnimationClip]
+let allClips = []; // [{clip, family}]
 let crowd  = [];   // [{root, mixer, action}]
+
+// pin the root's horizontal translation so locomotion plays IN PLACE (no drifting away)
+function neutralizeRoot(clip){
+  // quitar las pistas de POSICIÓN (solo la cadera las tiene): así el clip únicamente ROTA
+  // los huesos y cada cuerpo se queda parado a su altura natural (bind), sin importar si
+  // el clip viene en cm (Mixamo ~124) o m (RPM ~1). Movimiento en el sitio, sin deriva.
+  clip.tracks = clip.tracks.filter(t => !t.name.endsWith('.position'));
+}
+// clips of the currently selected family (or all)
+function activePool(){
+  const p = activeFamily === 'todas' ? allClips : allClips.filter(c => c.family === activeFamily);
+  return p.length ? p : allClips;
+}
 let bodyMat;       // shared body material (clay ↔ dark translucent, driven by luz general)
 let bodyCenterY = 0.84;     // vertical centre of a body (measured after load)
 let lookY = 1.0;            // camera focus height = the shared mid-plane
 
+const loadSafe = (url) => load(url).catch(err => { console.warn('no se pudo cargar', url, err); return null; });
 async function loadAssets(){
-  const [bodyGltfs, danceGltfs] = await Promise.all([
-    Promise.all(BODY_URLS.map(load)),
-    Promise.all(DANCE_URLS.map(load)),
+  const [bodyGltfs, motionGltfs] = await Promise.all([
+    Promise.all(BODY_URLS.map(loadSafe)),                 // un cuerpo que falle se omite, no rompe la obra
+    Promise.all(MOTION_ENTRIES.map(e => load(e.url))),
   ]);
   // override every body material with a uniform matte greyscale "clay" surface —
   // no skin/clothes colour, so form reads purely through light & shadow.
   bodyMat = new THREE.MeshStandardMaterial({ color: 0xc9c9cd, roughness: 0.78, metalness: 0.0 });
-  bodies = bodyGltfs.map(g => {
+  bodies = bodyGltfs.filter(g => g).map(g => {
     g.scene.traverse(o => {
+      // huesos de Mixamo (mixamorig:Hips…) → nombres RPM (Hips…) para que los 119 clips apliquen
+      if (o.name && /^mixamorig:?/i.test(o.name)) o.name = o.name.replace(/^mixamorig:?/i, '');
       if (o.isMesh){ o.castShadow = true; o.frustumCulled = false; o.material = bodyMat; }
     });
     return g.scene;
   });
   applyBodyLook();
-  // measure a body so we can centre every figure on one shared horizontal plane,
-  // regardless of its scale (so a giant and a hand-sized one share a mid-line).
+  // Normalizar TODOS los cuerpos a una misma altura, parados, pies en y=0 y centrados en XZ.
+  // Así modelos de distinta escala/orientación (RPM en metros, Mixamo en cm con raíz rotada…)
+  // conviven sin pelear con las transformaciones de la obra.
+  bodies[0].updateMatrixWorld(true);
+  const TARGET_H = new THREE.Box3().setFromObject(bodies[0]).getSize(new THREE.Vector3()).y || 1.7;
+  for (const b of bodies){
+    b.updateMatrixWorld(true);
+    let bb = new THREE.Box3().setFromObject(b);
+    const h = bb.max.y - bb.min.y;
+    if (isFinite(h) && h > 0.001) b.scale.multiplyScalar(TARGET_H / h);   // misma altura para todos
+    b.updateMatrixWorld(true);
+    bb = new THREE.Box3().setFromObject(b);
+    b.position.x -= (bb.min.x + bb.max.x) / 2;   // centrar X
+    b.position.z -= (bb.min.z + bb.max.z) / 2;   // centrar Z
+    b.position.y -= bb.min.y;                     // pies en y=0
+    b.updateMatrixWorld(true);
+  }
+  // medir para centrar cada figura en un plano horizontal compartido
   const box = new THREE.Box3().setFromObject(bodies[0]);
   const cy = (box.min.y + box.max.y) / 2;
   if (isFinite(cy) && cy > 0.1){ bodyCenterY = cy; lookY = cy; }
-  clips = danceGltfs.map((g, i) => { const c = g.animations[0]; c.name = DANCE_NAMES[i]; return c; });
+  allClips = motionGltfs.map((g, i) => {
+    const c = g.animations[0]; c.name = MOTION_ENTRIES[i].name; neutralizeRoot(c);
+    return { clip: c, family: MOTION_ENTRIES[i].fam };
+  });
 }
 
 // ---------------------------------------------------------------- crowd
@@ -458,7 +648,11 @@ function clearCrowd(){
 function placeCrowd(n){
   clearCrowd();
   for (let i = 0; i < n; i++){
-    const root = cloneSkinned(ri(bodies));
+    // envolver el cuerpo en un grupo: la obra escala/orienta el GRUPO (root) y así no pisa
+    // la escala/rotación natural del modelo (clave para los cuerpos de Mixamo).
+    const body = cloneSkinned(ri(bodies));
+    const root = new THREE.Group();
+    root.add(body);
     // stable per-figure seeds so moving a slider rearranges smoothly, not randomly
     root.userData.seed = {
       r:     Math.sqrt(Math.random()),   // uniform fill of a disc
@@ -538,45 +732,64 @@ function applyLayout(){
   });
 }
 
-// give one body a new dance with a crossfade
+// give one body a new dance. crossfade only when replacing a previous motion;
+// the FIRST assignment enters at full weight so it never shows the rest (T) pose.
 function setModelDance(c, clip, phaseMul = 1, scatterMul = 1){
-  if (c.action) c.action.fadeOut(0.4);
+  const prev = c.action;
   const action = c.mixer.clipAction(clip);
-  action.reset();
+  action.reset();                                   // tras reset, peso = 1
   action.setLoop(THREE.LoopRepeat, Infinity);
   action.timeScale = 1 + rf(-0.08, 0.08) * scatterMul;
   action.time = clip.duration * Math.random() * phaseMul;
-  action.fadeIn(0.4);
+  if (prev && prev !== action){                     // cruce entre dos movimientos (sin T-pose)
+    prev.fadeOut(0.4);
+    action.fadeIn(0.4);
+  }
   action.play();
   c.action = action;
 }
 
-// reparte bailes a todos; 'choreo' controla unísono ↔ variedad
+// reparte movimientos a todos desde la familia activa; 'choreo' controla unísono ↔ variedad
 function assignDances(){
-  const lead = ri(clips);
+  const pool = activePool();
+  const lead = ri(pool).clip;
   for (const c of crowd){
     const unique = Math.random() < choreo;
-    setModelDance(c, unique ? ri(clips) : lead, unique ? 1 : choreo, choreo);
+    setModelDance(c, unique ? ri(pool).clip : lead, unique ? 1 : choreo, choreo);
   }
 }
 
-// "tirar dados": composición aleatoria de cuerpos/espacio/cámara.
-// NO toca: cercanía, nada de luz/estrobo, velocidad de cámara, ni el sonido.
+// generador aleatorio por parámetro (cada uno setea su variable)
+const RANDOMIZERS = {
+  cuerpos:           () => { COUNT = 6 + (Math.random() * 25 | 0); },
+  familia:           () => { activeFamily = ri(['todas', ...Object.keys(MOTIONS)]); },
+  coreografia:       () => { choreo = Math.random(); },
+  cambioBaile:       () => { danceChange = Math.random() * 0.6; },
+  movimiento:        () => { animSpeed = Math.random() * 2; },
+  noise:             () => { noise = Math.random() * 0.5; },
+  formacion:         () => { formation = ri(FORMATIONS); },
+  rotacionAzar:      () => { rotRand = Math.random(); },
+  cercania:          () => { closeness = Math.random(); },
+  tamanoAzar:        () => { sizeVar = Math.random() * 0.5; },
+  vistaCamara:       () => { camMode = ri(CAMMODES); cam.fly = null; cam.tvEnd = 0; },
+  luzGeneral:        () => { masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.5, 1.0); },
+  colorLuz:          () => { strobeColor = new THREE.Color().setHSL(Math.random(), rf(0.15, 0.5), rf(0.18, 0.52)).getHex(); },
+  bpm:               () => { BPM = 80 + (Math.random() * 50 | 0); },
+  estroboVel:        () => { strobeHz = rf(2, 14); },
+  estroboIntensidad: () => { strobePeak = rf(1.5, 8); },
+  luzBase:           () => { baseLight = Math.random() * 0.5; },
+};
+
+// RANDOM: solo toca los parámetros marcados en randomInc (config: "random")
 function randomizeAll(){
-  COUNT       = 6 + (Math.random() * 25 | 0);          // 6..30
-  choreo      = Math.random();
-  danceChange = Math.random() * 0.6;
-  formation   = ri(FORMATIONS);
-  rotRand     = Math.random();
-  sizeVar     = Math.random() * 0.5;
-  camMode     = ri(CAMMODES);
-  cam.baseAz  = Math.random() * TAU; cam.el = rf(0.1, 1.0); cam.rad = rf(1.2, 8);   // tiende a más cercano
-  cam.fly = null; cam.tvEnd = 0;
-  masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.25, 1.0);  // todo el rango ± evitando la zona muerta en 0
-  applyBodyLook(); refreshStatic();
+  for (const k in RANDOMIZERS) if (randomInc[k]) RANDOMIZERS[k]();
+  discoLights.forEach(l => l.color.set(l.userData.tint === 'pick' ? strobeColor : ACCENT));
+  applyBodyLook(); refreshStatic(); updatePost();
   placeCrowd(COUNT);                                   // reconstruye + aplica formación + reparte bailes
   syncUI();
 }
+// programa el próximo auto-random con variabilidad (±30%)
+function scheduleAuto(now){ nextAuto = now + autoRandomSec * 1000 * (0.7 + Math.random() * 0.6); }
 
 // ---------------------------------------------------------------- camera control (drag + wheel + gentle sway)
 const DEG = Math.PI / 180;
@@ -589,13 +802,13 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const smooth = k => k * k * (3 - 2 * k);
 function newFly(fa, fe, fr){
   return { fromAz: fa, fromEl: fe, fromRad: fr,
-           toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(1.5, 12), t: 0 };
+           toAz: fa + rf(-2.6, 2.6), toEl: rf(0.12, 0.95), toRad: rf(1.1, 7), t: 0 };   // tope lejano más cerca (antes 12)
 }
 function newTvShot(now){
   cam.tvEnd  = now + lerp(11000, 450, camSpeed * camSpeed);   // extremo bajo: cortes muy lentos
   cam.tvAz   = Math.random() * TAU;
   cam.tvEl   = rf(0.08, 0.95);
-  cam.tvRad  = rf(1.2, 11);
+  cam.tvRad  = rf(1.1, 7);   // tope lejano más cerca (antes 11)
   cam.tvZoom = rf(-0.5, 0.7);                      // zoom lento dentro de la toma
 }
 let dragging = false, lastX = 0, lastY = 0;
@@ -609,7 +822,7 @@ addEventListener('pointermove', e => {
 });
 renderer.domElement.addEventListener('wheel', e => {
   e.preventDefault();
-  cam.rad = Math.max(0.4, Math.min(24, cam.rad + e.deltaY * 0.01));   // permite acercarse mucho a la masa
+  cam.rad = Math.max(0.4, Math.min(13, cam.rad + e.deltaY * 0.01));   // 0.4 = detalle muy cercano · 13 = tope lejano (antes 24)
 }, { passive:false });
 
 // ---------------------------------------------------------------- audio (synthesised kick + hat — original, no copyright)
@@ -649,17 +862,26 @@ function scheduleAudio(){
 // dark room, colour lights off, a single white flash that reveals the bodies in
 // frozen poses. flash rate is set in Hz by the "estrobo vel" slider (independent of bpm).
 let strobeOn = false;
-const DISCO_HEMI = 0.30, STROBE_HEMI = 0.015, KEY_DISCO = 0.45;
+const DISCO_HEMI = 0.45, STROBE_HEMI = 0.28, KEY_DISCO = 0.45;   // relleno hemisférico (sombra de los cuerpos no queda negra)
 
 // "luz general" (masterBright) is signed — it INVERTS where the light lands:
 //   +1 … 0  → light paints the bodies (clay-grey), background stays black.
 //    0 …-1  → bodies go flat black (silhouettes); the light/colour moves to the
 //             environment, so the silhouettes read against a glowing backdrop.
 // magnitude = how much light; sign = bodies-lit (+) vs background-lit (−).
-function setBg(hex){ scene.background.setHex(hex); scene.fog.color.setHex(hex); }
+function setBg(hex){
+  bgColor.setHex(hex);
+  // niebla acoplada a la luz general: en positivo (fondo negro) la bruma tira a OSCURO;
+  // en negativo se aclara incrementalmente con |luz general| (máx en −100). brumaBrillo = techo.
+  if (lNiebla){
+    const an = masterBright < 0 ? -masterBright : 0;        // 0 en positivo, 0..1 en negativo
+    const b = hazeBri * (0.03 + 0.97 * an);
+    scene.fog.color.setRGB(b * 0.86, b * 0.92, b * 1.0);
+  } else scene.fog.color.setHex(hex);
+}
 function applyBodyLook(){
   if (!bodyMat) return;
-  bodyMat.color.setHex(0xc9c9cd);                // misma arcilla en + y − (prueba)
+  bodyMat.color.setHex(0xc9c9cd);   // arcilla con sombreado (conserva detalle en cualquier modo)
   bodyMat.roughness = 0.92;
   bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
@@ -669,18 +891,17 @@ function applyBodyLook(){
 // dark bodies reflect less, so in negative the directional (modelling) light is boosted
 // to recover the chiaroscuro; ambient stays low so shadows keep their depth.
 const KEY_BOOST = 1.0;   // material claro → sin refuerzo (luz igual que en positivo)
+const KEY_NORMAL = 1.2;   // intensidad de la direccional en modo normal (reemplaza el relleno de las voladoras)
 function refreshStatic(){
   const amt = Math.abs(masterBright);
-  const kb = masterBright < 0 ? KEY_BOOST : 1.0;
-  hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;
-  if (!strobeOn) key.intensity = KEY_DISCO * amt * kb;
+  hemi.intensity = (strobeOn ? STROBE_HEMI : DISCO_HEMI) * amt;   // estrobo: bajo (contraste); normal: relleno visible
 }
 function setStrobe(on){
   strobeOn = on;
   scene.background.set(on ? 0x000000 : 0x050507);
   scene.fog.color.set(on ? 0x000000 : 0x050507);
-  key.color.set(on ? strobeColor : 0xbfc6ff);
-  refreshStatic();   // disco-light intensities are driven per-frame in tick()
+  key.color.set(strobeColor);   // la direccional usa el color elegido en ambos modos
+  refreshStatic();
   $('strobe').textContent = 'estrobo: ' + (on ? 'on' : 'off');
   $('strobe').classList.toggle('primary', on);
 }
@@ -690,19 +911,26 @@ let prev = performance.now();
 let beatClock = 0;
 let strobeClock = 0;
 let lastReadout = 0;
+let fpsT = 0, fpsFrames = 0;
+const fpsEl = document.getElementById('fps');
 let flashId = -1, flashAmp = 1;
 function tick(now){
   const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
+  fpsFrames++;
+  if (now - fpsT > 500){ if (showFps) fpsEl.textContent = Math.round(fpsFrames * 1000 / (now - fpsT)) + ' fps'; fpsFrames = 0; fpsT = now; }
   beatClock += dt * (BPM / 60);
   const beatPulse = Math.pow(0.5 - 0.5 * Math.cos(beatClock * TAU), 1.25);
+
+  if (autoRandom && now >= nextAuto){ randomizeAll(); scheduleAuto(now); }   // re-roll automático
 
   for (const c of crowd) c.mixer.update(dt * animSpeed);   // velocidad global del baile
 
   // cambio de baile espontáneo por modelo (proceso probabilístico → tiempos dispares)
-  if (danceChange > 0 && clips.length){
+  if (danceChange > 0 && allClips.length){
     const ratePerSec = danceChange * 0.5;          // máx ~1 cambio cada ~2 s por modelo
+    const pool = activePool();
     for (const c of crowd){
-      if (Math.random() < ratePerSec * c.root.userData.seed.rate * dt) setModelDance(c, ri(clips));
+      if (Math.random() < ratePerSec * c.root.userData.seed.rate * dt) setModelDance(c, ri(pool).clip);
     }
   }
 
@@ -716,8 +944,11 @@ function tick(now){
     l.position.set(Math.cos(a) * l.userData.radius, l.userData.h, Math.sin(a) * l.userData.radius);
   });
 
-  // BODIES are lit identically whether luz general is + or − (same key/hemi/disco).
-  // The only difference in − is: dark material (handled) + a colour-lit background (dome).
+  // Luz de los cuerpos = key direccional (color elegido) + hemi tenue. Las luces voladoras
+  // NO iluminan los cuerpos (intensidad 0); solo pintan el fondo (domo) en negativo.
+  key.color.setHex(strobeColor);
+  discoLights.forEach(l => l.intensity = 0);
+  const kb = neg ? 1 : 2.8;   // en positivo (fondo negro) mucha más luz para que los cuerpos se vean
   let domeInten;
   if (strobeOn){
     strobeClock += dt * strobeHz;
@@ -725,15 +956,15 @@ function tick(now){
     const fid = Math.floor(strobeClock);
     if (fid !== flashId){ flashId = fid; flashAmp = rf(0.55, 1.0); }
     const flash = (ph < 0.16 ? strobePeak * flashAmp : baseLight) * amt;
-    key.intensity = flash * (neg ? KEY_BOOST : 1);        // los cuerpos oscuros también destellan con cuerpo
-    discoLights.forEach(l => l.intensity = 0);            // sin luces de color durante estrobo
-    domeInten = flash;                                    // el fondo destella con los cuerpos
+    key.intensity = flash * kb;                            // destellos
+    domeInten = flash;
   } else {
-    discoLights.forEach(l => l.intensity = l.userData.base * l.userData.mult * (0.6 + 0.55 * beatPulse) * amt);
-    domeInten = (0.65 + 0.5 * beatPulse) * amt;
+    // modo normal = direccional estática + hemi (sin parpadeo ni luces voladoras), bien visible
+    key.intensity = KEY_NORMAL * amt * kb;
+    domeInten = 0.9 * amt;   // fondo (domo) FIJO, sin pulso de beat
   }
 
-  // background: black in +, colour-painted dome in −
+  // background: negro en + / domo de color en − (la niebla solo tiñe la fog, ver setBg)
   if (neg){ setBg(0x000000); paintDome(now, domeInten); }
   else      setBg(strobeOn ? 0x000000 : 0x050507);
 
@@ -772,7 +1003,7 @@ function tick(now){
       fAz = cam.baseAz + Math.sin(t * 0.25) * 0.12;
   }
   fEl  = Math.max(0.04, Math.min(1.5, fEl));
-  fRad = Math.max(0.4,  Math.min(28,  fRad));
+  fRad = Math.max(0.4,  Math.min(13,  fRad));   // tope lejano duro (antes 28); 0.4 = detalle cercano
   cam.curAz = fAz; cam.curEl = fEl; cam.curRad = fRad;
   camera.position.set(Math.cos(fAz) * Math.cos(fEl) * fRad, 1.3 + Math.sin(fEl) * fRad, Math.sin(fAz) * Math.cos(fEl) * fRad);
   camera.lookAt(0, lookY, 0);
@@ -786,14 +1017,25 @@ function tick(now){
   }
 
   scheduleAudio();
-  noisePass.uniforms.uTime.value = now / 1000;
+  gradePass.uniforms.uTime.value = now / 1000;
   composer.render();
   requestAnimationFrame(tick);
 }
 
 // ---------------------------------------------------------------- UI wiring
 const $ = id => document.getElementById(id);
-$('reroll').onclick = randomizeAll;       // composición aleatoria completa (menos velocidad cámara)
+// selector de familia dinámico (se arma desde el manifiesto motions.js)
+const FAM_LABELS = { todas:'todas', dance:'baile', locomotion:'locomoción', expression:'expresión', idle:'idle', fisico:'físico' };
+(function buildFamilySelect(){
+  const sel = $('s-fam'); if (!sel) return;
+  sel.innerHTML = '';
+  for (const k of ['todas', ...Object.keys(MOTIONS)]){
+    const o = document.createElement('option'); o.value = k; o.textContent = FAM_LABELS[k] || k; sel.appendChild(o);
+  }
+})();
+$('reroll').onclick = randomizeAll;       // RANDOM: nueva composición
+$('s-auto').onchange = e => { autoRandom = e.target.checked; if (autoRandom) scheduleAuto(performance.now()); };
+$('s-autosec').oninput = e => { autoRandomSec = +e.target.value; $('v-autosec').textContent = autoRandomSec; if (autoRandom) scheduleAuto(performance.now()); };
 $('strobe').onclick = () => setStrobe(!strobeOn);
 $('s-bpm').oninput = e => { BPM = +e.target.value; $('v-bpm').textContent = BPM; };
 $('s-count').oninput = e => { COUNT = +e.target.value; $('v-count').textContent = COUNT; $('m-count').textContent = COUNT; placeCrowd(COUNT); };
@@ -813,9 +1055,22 @@ $('s-base').oninput   = e => { baseLight = +e.target.value; $('v-base').textCont
 $('s-choreo').oninput = e => { choreo = +e.target.value; $('v-choreo').textContent = Math.round(choreo*100); assignDances(); };
 $('s-dchg').oninput  = e => { danceChange = +e.target.value; $('v-dchg').textContent = Math.round(danceChange*100); };
 $('s-form').onchange = e => { formation = e.target.value; applyLayout(); };
+$('s-fam').onchange  = e => { activeFamily = e.target.value; assignDances(); };
 $('s-cam').onchange  = e => { camMode = e.target.value; cam.fly = null; cam.tvEnd = 0; };
 $('s-camvel').oninput = e => { camSpeed = +e.target.value; $('v-camvel').textContent = Math.round(camSpeed*100); };
-$('s-noise').oninput = e => { noise = +e.target.value; $('v-noise').textContent = Math.round(noise*100); applyNoise(); };
+$('s-noise').oninput = e => { noise = +e.target.value; $('v-noise').textContent = Math.round(noise*100); updatePost(); };
+$('l-niebla').onchange = e => { lNiebla = e.target.checked; updatePost(); };
+$('s-niebla').oninput  = e => { nieblaDens = +e.target.value; $('v-niebla').textContent = Math.round(nieblaDens*100); updatePost(); };
+$('s-haze').oninput    = e => { hazeBri = +e.target.value; $('v-haze').textContent = Math.round(hazeBri*100); };
+$('l-bloom').onchange  = e => { lBloom  = e.target.checked; updatePost(); };
+$('s-bloomi').oninput  = e => { bloomFuerza = +e.target.value; $('v-bloomi').textContent = Math.round(bloomFuerza*100); updatePost(); };
+$('l-grade').onchange  = e => { lGrade  = e.target.checked; updatePost(); };
+$('s-gradei').oninput  = e => { gradeInt = +e.target.value; $('v-gradei').textContent = Math.round(gradeInt*100); updatePost(); };
+$('s-blur').oninput    = e => { blurGen = +e.target.value; $('v-blur').textContent = Math.round(blurGen*100); applyBlur(); };
+$('s-dithermode').onchange = e => { ditherModo = e.target.value; updatePost(); };
+$('s-dscale').oninput      = e => { ditherEscala = +e.target.value; $('v-dscale').textContent = Math.round(ditherEscala*100); updatePost(); };
+$('s-dcontrast').oninput   = e => { ditherContraste = +e.target.value; $('v-dcontrast').textContent = Math.round(ditherContraste*100); updatePost(); };
+$('l-fps').onchange    = e => { showFps = e.target.checked; fpsEl.style.display = showFps ? 'block' : 'none'; };
 $('s-mov').oninput = e => { animSpeed = +e.target.value * 2; $('v-mov').textContent = animSpeed.toFixed(1); };
 $('grid').onclick = () => { const v = !grid.visible; grid.visible = v; floor.visible = v; };
 $('sound').onclick = () => {
@@ -827,6 +1082,8 @@ $('sound').onclick = () => {
 };
 
 const ui = document.getElementById('ui');
+if (!panelVisible) ui.classList.add('hidden');            // móvil / config: panel oculto al inicio
+$('panelBtn').onclick = () => ui.classList.toggle('hidden');
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (k === 'r'){ e.preventDefault(); randomizeAll(); }            // tirar dados
@@ -847,7 +1104,8 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
-  noisePass.uniforms.uResolution.value.set(innerWidth, innerHeight);
+  gradePass.uniforms.uResolution.value.set(innerWidth, innerHeight);
+  bloomPass.setSize(innerWidth, innerHeight);
 });
 
 // push the current values into every control + its readout
@@ -866,19 +1124,58 @@ function syncUI(){
   set('s-choreo', choreo); $('v-choreo').textContent = Math.round(choreo*100);
   set('s-dchg', danceChange); $('v-dchg').textContent = Math.round(danceChange*100);
   set('s-mov', animSpeed / 2); $('v-mov').textContent = animSpeed.toFixed(1);
+  { const el = $('s-auto'); if (el) el.checked = autoRandom; }
+  set('s-autosec', autoRandomSec); $('v-autosec').textContent = autoRandomSec;
   set('s-form', formation);
+  set('s-fam', activeFamily);
   set('s-cam', camMode);
   set('s-camvel', camSpeed); $('v-camvel').textContent = Math.round(camSpeed*100);
   set('s-noise', noise); $('v-noise').textContent = Math.round(noise*100);
+  { const c=$('l-niebla'); if(c) c.checked=lNiebla; }
+  { const c=$('l-grade');  if(c) c.checked=lGrade; }
+  { const c=$('l-bloom');  if(c) c.checked=lBloom; }
+  { const c=$('l-fps');    if(c) c.checked=showFps; }
+  set('s-niebla', nieblaDens); $('v-niebla').textContent = Math.round(nieblaDens*100);
+  set('s-haze', hazeBri);      $('v-haze').textContent   = Math.round(hazeBri*100);
+  set('s-bloomi', bloomFuerza);$('v-bloomi').textContent = Math.round(bloomFuerza*100);
+  set('s-gradei', gradeInt);   $('v-gradei').textContent = Math.round(gradeInt*100);
+  set('s-blur', blurGen);      $('v-blur').textContent   = Math.round(blurGen*100);
+  set('s-dithermode', ditherModo);
+  set('s-dscale', ditherEscala);       $('v-dscale').textContent    = Math.round(ditherEscala*100);
+  set('s-dcontrast', ditherContraste); $('v-dcontrast').textContent = Math.round(ditherContraste*100);
+  if (fpsEl) fpsEl.style.display = showFps ? 'block' : 'none';
 }
-// resume audio on first user gesture (browsers block autoplay until then)
-addEventListener('pointerdown', () => { if (audio && audio.state === 'suspended') audio.resume(); });
+// ---- sacudir el teléfono → nuevo RANDOM ----
+let lastShake = 0, lastAcc = null, motionArmed = false;
+function onMotion(e){
+  const a = e.accelerationIncludingGravity; if (!a) return;
+  if (lastAcc){
+    const dx = a.x - lastAcc.x, dy = a.y - lastAcc.y, dz = a.z - lastAcc.z;
+    const mag = Math.sqrt(dx*dx + dy*dy + dz*dz), now = performance.now();
+    if (mag > 24 && now - lastShake > 1200){ lastShake = now; randomizeAll(); }
+  }
+  lastAcc = { x:a.x, y:a.y, z:a.z };
+}
+function armMotion(){
+  if (motionArmed || !SHAKE) return; motionArmed = true;
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function'){
+    DeviceMotionEvent.requestPermission().then(s => { if (s === 'granted') addEventListener('devicemotion', onMotion); }).catch(() => {});
+  } else {
+    addEventListener('devicemotion', onMotion);
+  }
+}
+// resume audio + armar el sensor de movimiento en el primer toque (iOS exige gesto)
+addEventListener('pointerdown', () => {
+  if (audio && audio.state === 'suspended') audio.resume();
+  armMotion();
+});
 
 // ---------------------------------------------------------------- boot
 loadAssets().then(() => {
-  $('m-dances').textContent = clips.length;
+  $('m-dances').textContent = allClips.length;
   randomizeAll();             // siempre arranca con una composición aleatoria (dado inicial)
-  applyNoise();
+  updatePost();
+  applyBlur();
   if (cfg.piso){ grid.visible = true; floor.visible = true; }
   setStrobe(!!cfg.estrobo);    // also sets disco/strobe light levels via refreshStatic
   if (cfg.sonido) $('sound').click();   // begins on first click due to autoplay rules

@@ -40,6 +40,9 @@ window.CONFIG = {
   bloomFuerza:        50,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
   blurGen:            0,    // desenfoque general del render (0 = nítido)
+  ditherModo:         "off",    // off | fino (anti-banding) | organico (b/n alto contraste)
+  ditherEscala:       50,    // escala de la mancha orgánica del dither
+  ditherContraste:    60,    // contraste del dither orgánico
 
   // modo
   estrobo:            false,    // arrancar en modo estrobo
@@ -50,7 +53,6 @@ window.CONFIG = {
   sacudir:            true,    // sacudir el teléfono dispara un RANDOM
   capaNiebla:         true,    // niebla atmosférica (INSIDE)
   capaGrade:          true,    // grade frío/apagado (INSIDE)
-  capaDither:         false,    // dither anti-banding
   capaBloom:          false,    // bloom
   fps:                false,    // mostrar FPS
 

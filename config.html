@@ -139,8 +139,9 @@ const DEFAULTS = {
   luzGeneral:98, colorLuz:'#ffffff', bpm:112,
   estroboVel:7.5, estroboIntensidad:1.6, luzBase:33,
   estrobo:false, sonido:false, piso:false, autoRandom:false, autoRandomSeg:10,
-  capaNiebla:false, capaGrade:false, capaDither:false, capaBloom:false, fps:false,
+  capaNiebla:false, capaGrade:false, capaBloom:false, fps:false,
   nieblaDens:50, brumaBrillo:40, bloomFuerza:50, gradeInt:100, blurGen:0,
+  ditherModo:'off', ditherEscala:50, ditherContraste:60,
   panel:true, sacudir:true,
 };
 const cur = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
@@ -183,6 +184,9 @@ const SECTIONS = [
     ['bloomFuerza','bloom fuerza',0,100,1,'fuerza del bloom'],
     ['gradeInt','grade intensidad',0,100,1,'intensidad del grade frío'],
     ['blurGen','blur general',0,100,1,'desenfoque general del render (0 = nítido)'],
+    ['ditherModo','dither modo','select',['off','fino','organico'],0,'off | fino (anti-banding) | organico (b/n alto contraste)'],
+    ['ditherEscala','dither escala',0,100,1,'escala de la mancha orgánica del dither'],
+    ['ditherContraste','dither contraste',0,100,1,'contraste del dither orgánico'],
   ]],
   ['modo', [
     ['estrobo','estrobo','bool',0,0,'arrancar en modo estrobo'],
@@ -193,7 +197,6 @@ const SECTIONS = [
     ['sacudir','sacudir = random','bool',0,0,'sacudir el teléfono dispara un RANDOM'],
     ['capaNiebla','capa: niebla','bool',0,0,'niebla atmosférica (INSIDE)'],
     ['capaGrade','capa: grade','bool',0,0,'grade frío/apagado (INSIDE)'],
-    ['capaDither','capa: dither','bool',0,0,'dither anti-banding'],
     ['capaBloom','capa: bloom','bool',0,0,'bloom'],
     ['fps','medidor FPS','bool',0,0,'mostrar FPS'],
   ]],

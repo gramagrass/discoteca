@@ -222,7 +222,22 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <label>blur general <span class="val" id="v-blur">0</span></label>
       <input id="s-blur" type="range" min="0" max="1" step="0.01" value="0">
     </div>
-    <label class="chk"><input type="checkbox" id="l-dither"> dither anti-banding</label>
+    <div class="ctl">
+      <label>dither</label>
+      <select id="s-dithermode">
+        <option value="off">off</option>
+        <option value="fino">fino (anti-banding)</option>
+        <option value="organico">orgánico b/n</option>
+      </select>
+    </div>
+    <div class="ctl">
+      <label>dither escala <span class="val" id="v-dscale">50</span></label>
+      <input id="s-dscale" type="range" min="0" max="1" step="0.01" value="0.5">
+    </div>
+    <div class="ctl">
+      <label>dither contraste <span class="val" id="v-dcontrast">60</span></label>
+      <input id="s-dcontrast" type="range" min="0" max="1" step="0.01" value="0.6">
+    </div>
     <label class="chk"><input type="checkbox" id="l-fps"> mostrar FPS</label>
 
     <div class="sec">luz / estrobo</div>
@@ -326,7 +341,10 @@ let autoRandomSec = cfg.autoRandomSeg;          // intervalo base (s)
 let nextAuto     = 0;                           // momento del próximo auto-random
 let activeFamily = cfg.familia || 'todas';      // pool de movimientos: todas|dance|idle|locomotion|expression
 // capas de render (INSIDE) — cada una con su interruptor, default off
-let lNiebla = !!cfg.capaNiebla, lGrade = !!cfg.capaGrade, lDither = !!cfg.capaDither, lBloom = !!cfg.capaBloom;
+let lNiebla = !!cfg.capaNiebla, lGrade = !!cfg.capaGrade, lBloom = !!cfg.capaBloom;
+let ditherModo      = cfg.ditherModo ?? (cfg.capaDither ? 'fino' : 'off');   // off | fino | organico (retrocompat con capaDither)
+let ditherEscala    = (cfg.ditherEscala    ?? 50) / 100;   // escala de la mancha orgánica
+let ditherContraste = (cfg.ditherContraste ?? 60) / 100;   // contraste del dither orgánico
 let showFps = !!cfg.fps;
 const isMobile = matchMedia('(pointer: coarse)').matches || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 let panelVisible = isMobile ? false : (cfg.panel !== undefined ? !!cfg.panel : true);   // móvil: oculto siempre (botón ☰); escritorio: config
@@ -384,12 +402,24 @@ const GradeShader = {
     uResolution: { value: new THREE.Vector2(innerWidth, innerHeight) },
     uAmount:     { value: 0.5 },   // grano
     uGrade:      { value: 0 },     // capa grade frío/apagado (INSIDE)
-    uDither:     { value: 0 },     // capa dither anti-banding
+    uDitherMode: { value: 0 },     // 0 = off · 1 = fino anti-banding · 2 = orgánico b/n
+    uDScale:     { value: 0.5 },   // escala de la mancha orgánica (0 = grano fino · 1 = manchas grandes)
+    uDContrast:  { value: 1.6 },   // contraste del dither orgánico
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount; uniform float uGrade; uniform float uDither;
+    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uResolution; uniform float uAmount; uniform float uGrade;
+    uniform float uDitherMode; uniform float uDScale; uniform float uDContrast;
     varying vec2 vUv;
+    float hash21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    // value noise suave → manchas orgánicas (no la rejilla regular de un Bayer)
+    float vnoise(vec2 p){
+      vec2 i = floor(p), f = fract(p);
+      float a = hash21(i), b = hash21(i + vec2(1.0, 0.0));
+      float c = hash21(i + vec2(0.0, 1.0)), d = hash21(i + vec2(1.0, 1.0));
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+    }
     void main(){
       vec3 col = texture2D(tDiffuse, vUv).rgb;
       if (uGrade > 0.001){                        // paleta apagada y fría tipo INSIDE (intensidad uGrade)
@@ -401,7 +431,16 @@ const GradeShader = {
       }
       float g = fract(sin(dot(vUv * uResolution + uTime, vec2(12.9898, 78.233))) * 43758.5453);
       col += (g - 0.5) * 0.14 * uAmount;          // grano
-      if (uDither > 0.5){                         // dither fino anti-banding
+      if (uDitherMode > 1.5){                     // ── dither orgánico b/n, alto contraste, pocos grises ──
+        vec2 p = vUv * uResolution;
+        float lum = dot(col, vec3(0.299, 0.587, 0.114));
+        lum = clamp((lum - 0.5) * uDContrast + 0.5, 0.0, 1.0);   // más contraste
+        float sc = mix(0.20, 0.025, uDScale);     // escala de la mancha (slider: + grande = manchas grandes)
+        float org = vnoise(p * sc + uTime * 0.04);              // umbral orgánico (blobs lentos)
+        org = org * 0.62 + hash21(p + floor(uTime * 10.0)) * 0.38; // rompe el patrón → grano vivo
+        float q = step(org, lum);                 // 1-bit puro: el gris surge de la densidad del dither
+        col = vec3(q);
+      } else if (uDitherMode > 0.5){              // fino anti-banding (lo de antes)
         float d = fract(sin(dot(vUv * uResolution + uTime * 0.5, vec2(39.346, 11.135))) * 24634.633);
         col += (d - 0.5) * (2.0 / 255.0);
       }
@@ -421,8 +460,11 @@ composer.addPass(new OutputPass());   // tone-map ACES + sRGB al final
 function updatePost(){
   gradePass.uniforms.uAmount.value = noise;
   gradePass.uniforms.uGrade.value  = lGrade ? gradeInt : 0;
-  gradePass.uniforms.uDither.value = lDither ? 1 : 0;
-  gradePass.enabled = (noise > 0.001) || lGrade || lDither;
+  const dmode = ditherModo === 'organico' ? 2 : ditherModo === 'fino' ? 1 : 0;
+  gradePass.uniforms.uDitherMode.value = dmode;
+  gradePass.uniforms.uDScale.value     = ditherEscala;
+  gradePass.uniforms.uDContrast.value  = 1.0 + ditherContraste * 2.5;   // 1.0 .. 3.5
+  gradePass.enabled = (noise > 0.001) || lGrade || dmode > 0;
   bloomPass.enabled = lBloom;
   bloomPass.strength = bloomFuerza * 1.6;
   scene.fog.density = lNiebla ? (FOG_BASE + nieblaDens * 0.10) : FOG_BASE;
@@ -1014,7 +1056,9 @@ $('s-bloomi').oninput  = e => { bloomFuerza = +e.target.value; $('v-bloomi').tex
 $('l-grade').onchange  = e => { lGrade  = e.target.checked; updatePost(); };
 $('s-gradei').oninput  = e => { gradeInt = +e.target.value; $('v-gradei').textContent = Math.round(gradeInt*100); updatePost(); };
 $('s-blur').oninput    = e => { blurGen = +e.target.value; $('v-blur').textContent = Math.round(blurGen*100); applyBlur(); };
-$('l-dither').onchange = e => { lDither = e.target.checked; updatePost(); };
+$('s-dithermode').onchange = e => { ditherModo = e.target.value; updatePost(); };
+$('s-dscale').oninput      = e => { ditherEscala = +e.target.value; $('v-dscale').textContent = Math.round(ditherEscala*100); updatePost(); };
+$('s-dcontrast').oninput   = e => { ditherContraste = +e.target.value; $('v-dcontrast').textContent = Math.round(ditherContraste*100); updatePost(); };
 $('l-fps').onchange    = e => { showFps = e.target.checked; fpsEl.style.display = showFps ? 'block' : 'none'; };
 $('s-mov').oninput = e => { animSpeed = +e.target.value * 2; $('v-mov').textContent = animSpeed.toFixed(1); };
 $('grid').onclick = () => { const v = !grid.visible; grid.visible = v; floor.visible = v; };
@@ -1078,7 +1122,6 @@ function syncUI(){
   set('s-noise', noise); $('v-noise').textContent = Math.round(noise*100);
   { const c=$('l-niebla'); if(c) c.checked=lNiebla; }
   { const c=$('l-grade');  if(c) c.checked=lGrade; }
-  { const c=$('l-dither'); if(c) c.checked=lDither; }
   { const c=$('l-bloom');  if(c) c.checked=lBloom; }
   { const c=$('l-fps');    if(c) c.checked=showFps; }
   set('s-niebla', nieblaDens); $('v-niebla').textContent = Math.round(nieblaDens*100);
@@ -1086,6 +1129,9 @@ function syncUI(){
   set('s-bloomi', bloomFuerza);$('v-bloomi').textContent = Math.round(bloomFuerza*100);
   set('s-gradei', gradeInt);   $('v-gradei').textContent = Math.round(gradeInt*100);
   set('s-blur', blurGen);      $('v-blur').textContent   = Math.round(blurGen*100);
+  set('s-dithermode', ditherModo);
+  set('s-dscale', ditherEscala);       $('v-dscale').textContent    = Math.round(ditherEscala*100);
+  set('s-dcontrast', ditherContraste); $('v-dcontrast').textContent = Math.round(ditherContraste*100);
   if (fpsEl) fpsEl.style.display = showFps ? 'block' : 'none';
 }
 // ---- sacudir el teléfono → nuevo RANDOM ----

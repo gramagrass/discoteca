@@ -11,7 +11,7 @@ window.CONFIG = {
   cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
   movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
   noise:              10,    // ruido de película (0 = off)
-  autoRandomSeg:      10,    // intervalo del auto-random en segundos
+  autoRandomSeg:      25,    // intervalo del auto-random en segundos
 
   // espacio
   formacion:          "aleatorio",    // aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral

@@ -802,6 +802,7 @@ const cam = {
   az: cfg.camAngulo * DEG, baseAz: cfg.camAngulo * DEG,
   el: cfg.camAltura * DEG, rad: cfg.camZoom,
   curAz: cfg.camAngulo * DEG, curEl: cfg.camAltura * DEG, curRad: cfg.camZoom,
+  mAz: 0, mEl: 0, mRad: 0,   // offset manual (arrastre + rueda) — se suma en CUALQUIER modo
 };
 const lerp = (a, b, k) => a + (b - a) * k;
 const smooth = k => k * k * (3 - 2 * k);
@@ -821,13 +822,13 @@ renderer.domElement.addEventListener('pointerdown', e => { dragging = true; last
 addEventListener('pointerup', () => dragging = false);
 addEventListener('pointermove', e => {
   if (!dragging) return;
-  cam.baseAz -= (e.clientX - lastX) * 0.005;
-  cam.el     = Math.max(0.04, Math.min(1.2, cam.el - (e.clientY - lastY) * 0.005));
+  cam.mAz -= (e.clientX - lastX) * 0.005;                                  // arrastre horizontal → offset de azimut
+  cam.mEl  = Math.max(-1.4, Math.min(1.4, cam.mEl - (e.clientY - lastY) * 0.005));  // arrastre vertical → offset de elevación
   lastX = e.clientX; lastY = e.clientY;
 });
 renderer.domElement.addEventListener('wheel', e => {
   e.preventDefault();
-  cam.rad = Math.max(0.4, Math.min(13, cam.rad + e.deltaY * 0.01));   // 0.4 = detalle muy cercano · 13 = tope lejano (antes 24)
+  cam.mRad = Math.max(-11, Math.min(12, cam.mRad + e.deltaY * 0.01));      // rueda → offset de zoom (acotado para no dejar zona muerta)
 }, { passive:false });
 
 // ---------------------------------------------------------------- audio (synthesised kick + hat — original, no copyright)
@@ -1007,8 +1008,9 @@ function tick(now){
     default:                                          // libre (arrastrar + vaivén suave)
       fAz = cam.baseAz + Math.sin(t * 0.25) * 0.12;
   }
-  fEl  = Math.max(0.04, Math.min(1.5, fEl));
-  fRad = Math.max(0.4,  Math.min(13,  fRad));   // tope lejano duro (antes 28); 0.4 = detalle cercano
+  fAz += cam.mAz;                               // offset manual: el arrastre/zoom funciona en TODOS los modos
+  fEl  = Math.max(0.04, Math.min(1.5, fEl + cam.mEl));
+  fRad = Math.max(0.4,  Math.min(13,  fRad + cam.mRad));   // tope lejano duro; 0.4 = detalle cercano
   cam.curAz = fAz; cam.curEl = fEl; cam.curRad = fRad;
   camera.position.set(Math.cos(fAz) * Math.cos(fEl) * fRad, 1.3 + Math.sin(fEl) * fRad, Math.sin(fAz) * Math.cos(fEl) * fRad);
   camera.lookAt(0, lookY, 0);

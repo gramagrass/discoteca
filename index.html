@@ -250,7 +250,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <label>tono de cuerpo <span class="val" id="v-tono">79</span></label>
       <input id="s-tono" type="range" min="0" max="1" step="0.01" value="0.79">
     </div>
-    <label class="chk"><input type="checkbox" id="l-floor" checked> plantar pies en el piso</label>
+    <label class="chk"><input type="checkbox" id="l-floor"> rejilla / piso</label>
     <div class="ctl">
       <label>color luz</label>
       <input id="c-strobe" type="color" value="#ffffff">
@@ -273,7 +273,6 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
     </div>
     <button id="strobe">estrobo: off</button>
     <button id="sound">sonido: off</button>
-    <button id="grid">piso</button>
 
     <div class="foot">
       <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> movimientos · mocap real</span>
@@ -330,7 +329,6 @@ let BPM          = cfg.bpm;
 let COUNT        = cfg.cuerpos;
 let masterBright = cfg.luzGeneral / 100;        // general dimmer (1 = full, →0 = almost black)
 let bodyTone     = (cfg.colorPiel ?? 79) / 100; // tono de cuerpo: 0 = negro · 1 = porcelana blanca
-let floorPlant   = cfg.plantarPies ?? true;     // mantener los pies en el piso cada frame
 let strobeColor  = clampColor(parseInt(String(cfg.colorLuz).slice(1), 16));  // tint (dark / desaturated)
 let rotRand      = cfg.rotacionAzar / 100;      // 0 = all same way, 1 = fully random
 let closeness    = cfg.cercania / 100;          // 0 = packed blob, 1 = scattered
@@ -962,7 +960,7 @@ function tick(now){
   if (autoRandom && now >= nextAuto){ randomizeAll(); scheduleAuto(now); }   // re-roll automático
 
   for (const c of crowd) c.mixer.update(dt * animSpeed);   // velocidad global del baile
-  if (floorPlant) for (const c of crowd) groundFeet(c);    // mantener los pies en el piso
+  for (const c of crowd) groundFeet(c);                    // siempre: pies plantados en el piso
 
   // cambio de baile espontáneo por modelo (proceso probabilístico → tiempos dispares)
   if (danceChange > 0 && allClips.length){
@@ -1090,7 +1088,7 @@ $('s-bpm').oninput = e => { BPM = +e.target.value; $('v-bpm').textContent = BPM;
 $('s-count').oninput = e => { COUNT = +e.target.value; $('v-count').textContent = COUNT; $('m-count').textContent = COUNT; placeCrowd(COUNT); };
 $('s-bright').oninput = e => { masterBright = +e.target.value; $('v-bright').textContent = Math.round(masterBright*100); refreshStatic(); applyBodyLook(); };
 $('s-tono').oninput   = e => { bodyTone = +e.target.value; $('v-tono').textContent = Math.round(bodyTone*100); applyBodyLook(); };
-$('l-floor').onchange = e => { floorPlant = e.target.checked; };
+$('l-floor').onchange = e => { grid.visible = floor.visible = e.target.checked; };   // rejilla on/off
 $('c-strobe').oninput = e => {
   strobeColor = clampColor(parseInt(e.target.value.slice(1), 16));
   e.target.value = '#' + strobeColor.toString(16).padStart(6,'0');   // refleja el valor restringido
@@ -1123,7 +1121,6 @@ $('s-dscale').oninput      = e => { ditherEscala = +e.target.value; $('v-dscale'
 $('s-dcontrast').oninput   = e => { ditherContraste = +e.target.value; $('v-dcontrast').textContent = Math.round(ditherContraste*100); updatePost(); };
 $('l-fps').onchange    = e => { showFps = e.target.checked; fpsEl.style.display = showFps ? 'block' : 'none'; };
 $('s-mov').oninput = e => { animSpeed = +e.target.value * 2; $('v-mov').textContent = animSpeed.toFixed(1); };
-$('grid').onclick = () => { const v = !grid.visible; grid.visible = v; floor.visible = v; };
 $('sound').onclick = () => {
   if (!audio) startAudio();
   if (audio.state === 'suspended') audio.resume();
@@ -1166,7 +1163,7 @@ function syncUI(){
   set('s-bpm', BPM);       $('v-bpm').textContent = BPM;
   set('s-bright', masterBright); $('v-bright').textContent = Math.round(masterBright*100);
   set('s-tono', bodyTone);       $('v-tono').textContent   = Math.round(bodyTone*100);
-  { const c = $('l-floor'); if (c) c.checked = floorPlant; }
+  { const c = $('l-floor'); if (c) c.checked = grid.visible; }
   set('c-strobe', '#' + strobeColor.toString(16).padStart(6,'0'));
   set('s-rot', rotRand);   $('v-rot').textContent = Math.round(rotRand*100);
   set('s-close', closeness); $('v-close').textContent = Math.round(closeness*100);

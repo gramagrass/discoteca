@@ -6,11 +6,11 @@ window.CONFIG = {
 
   // cuerpos
   cuerpos:            13,    // nº de cuerpos (1–30)
-  familia:            "dance",    // pool de movimientos para las generaciones
+  familia:            "dance",    // pool de movimientos: todas | solo bailes | solo emociones
   coreografia:        100,    // 0 = todos el mismo baile · 100 = cada quien el suyo
   cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
   movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
-  noise:              10,    // ruido de película (0 = off)
+  noise:              30,    // ruido de película (0 = off)
   autoRandomSeg:      25,    // intervalo del auto-random en segundos
 
   // espacio
@@ -21,7 +21,7 @@ window.CONFIG = {
 
   // cámara
   vistaCamara:        "tv",    // libre | orbita | sobrevuelo | tv | cenital | cenital_inclinada
-  camVelocidad:       40,    // velocidad de cámara (cortes / vuelo / órbita)
+  camVelocidad:       58,    // velocidad de cámara (cortes / vuelo / órbita)
   camAngulo:          293,    // ángulo horizontal en grados
   camAltura:          2,    // altura de cámara en grados
   camZoom:            3.8,    // distancia (menor = más cerca)
@@ -69,7 +69,7 @@ window.CONFIG = {
     rotacionAzar:     true,
     cercania:         false,
     tamanoAzar:       true,
-    vistaCamara:      false,
+    vistaCamara:      true,
     luzGeneral:       true,
     colorLuz:         false,
     bpm:              false,

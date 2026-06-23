@@ -10,7 +10,7 @@ window.CONFIG = {
   coreografia:        100,    // 0 = todos el mismo baile · 100 = cada quien el suyo
   cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
   movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
-  noise:              10,    // ruido de película (0 = off)
+  noise:              30,    // ruido de película (0 = off)
   autoRandomSeg:      10,    // intervalo del auto-random en segundos
 
   // espacio
@@ -28,8 +28,8 @@ window.CONFIG = {
 
   // luz / estrobo
   luzGeneral:         -100,    // -100..100 (bajo cero: cuerpos oscuros translúcidos)
-  colorPiel:          79,    // tono de cuerpo (0 = negro · 100 = porcelana blanca)
-  colorLuz:           "#c2c2c2",    // color del estrobo / luz
+  colorPiel:          100,    // tono de cuerpo (0 = negro · 100 = porcelana blanca)
+  colorLuz:           "#ffffff",    // color del estrobo / luz
   bpm:                112,    // pulso de luces/audio
   estroboVel:         7.5,    // destellos por segundo
   estroboIntensidad:  1.6,    // fuerza del destello (0 = negro)
@@ -46,8 +46,8 @@ window.CONFIG = {
   ditherContraste:    60,    // contraste del dither orgánico
 
   // modo
-  estrobo:            false,    // arrancar en modo estrobo
-  sonido:             false,    // arrancar con sonido (suena al primer clic)
+  estrobo:            true,    // arrancar en modo estrobo
+  sonido:             true,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
   autoRandom:         true,    // re-roll automático cada cierto tiempo
   panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto)

@@ -374,10 +374,21 @@ const MODELS = window.MODELS || ['Masculine', 'Feminine'];
 const BODY_URLS = MODELS.map(n => /^https?:/.test(n) ? n : `./assets/bodies/${n}.glb`);
 // movimientos por familia, desde el manifiesto motions.js (dance/idle/locomotion/expression)
 const MOTIONS = window.MOTIONS || { dance: [], idle: [], locomotion: [], expression: [] };
+// La biblioteca de movimientos es enorme (cientos de segmentos). Cargar TODO sería
+// pesadísimo, así que por sesión se carga un SUBCONJUNTO ALEATORIO: cada recarga del
+// sitio trae una mezcla distinta de danzas. Tope por danza + tope total.
+const MAX_PER_FAM = 2;     // hasta N segmentos por danza
+const MAX_CLIPS   = 40;    // tope total de clips por sesión
+const shufArr = arr => { for (let i = arr.length - 1; i > 0; i--){ const j = (Math.random() * (i + 1)) | 0; [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
 const MOTION_ENTRIES = [];
-for (const fam of Object.keys(MOTIONS))
-  for (const name of MOTIONS[fam])
-    MOTION_ENTRIES.push({ fam, name, url: `./assets/motions/${fam}/${name}.glb` });
+{
+  const pool = [];
+  for (const fam of Object.keys(MOTIONS)){
+    for (const name of shufArr([...MOTIONS[fam]]).slice(0, MAX_PER_FAM))
+      pool.push({ fam, name, url: `./assets/motions/${fam}/${name}.glb` });
+  }
+  for (const e of shufArr(pool).slice(0, MAX_CLIPS)) MOTION_ENTRIES.push(e);
+}
 
 // ---------------------------------------------------------------- renderer / scene
 const renderer = new THREE.WebGLRenderer({ antialias:true });

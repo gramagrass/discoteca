@@ -297,6 +297,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -583,6 +584,7 @@ grid.visible  = false;
 
 // ---------------------------------------------------------------- load assets
 const loader = new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);   // los clips van comprimidos con EXT_meshopt_compression
 const load = (url) => new Promise((res, rej) => loader.load(url, res, undefined, rej));
 const ri = (a) => a[(Math.random()*a.length)|0];
 const rf = (a,b) => a + Math.random()*(b-a);
@@ -605,7 +607,11 @@ function neutralizeRoot(clip){
 }
 // clips of the currently selected family (or all)
 function activePool(){
-  const p = activeFamily === 'todas' ? allClips : allClips.filter(c => c.family === activeFamily);
+  let p;
+  if      (activeFamily === 'todas')     p = allClips;
+  else if (activeFamily === 'BAILES')    p = allClips.filter(c => c.family.startsWith('baile_'));   // ★ todos los bailes
+  else if (activeFamily === 'EMOCIONES') p = allClips.filter(c => c.family.startsWith('emo_'));      // ★ todas las emociones
+  else                                   p = allClips.filter(c => c.family === activeFamily);          // una familia específica
   return p.length ? p : allClips;
 }
 let bodyMat;       // shared body material (clay ↔ dark translucent, driven by luz general)
@@ -780,7 +786,7 @@ function assignDances(){
 // generador aleatorio por parámetro (cada uno setea su variable)
 const RANDOMIZERS = {
   cuerpos:           () => { COUNT = 6 + (Math.random() * 25 | 0); },
-  familia:           () => { activeFamily = ri(['todas', ...Object.keys(MOTIONS)]); },
+  familia:           () => { activeFamily = ri(['todas', 'BAILES', 'EMOCIONES']); },
   coreografia:       () => { choreo = Math.random(); },
   cambioBaile:       () => { danceChange = Math.random() * 0.6; },
   movimiento:        () => { animSpeed = Math.random() * 2; },
@@ -1044,14 +1050,23 @@ function tick(now){
 
 // ---------------------------------------------------------------- UI wiring
 const $ = id => document.getElementById(id);
-// selector de familia dinámico (se arma desde el manifiesto motions.js)
-const FAM_LABELS = { todas:'todas', dance:'baile', locomotion:'locomoción', expression:'expresión', idle:'idle', fisico:'físico' };
+// selector de familia dinámico — familias semánticas (baile_* / emo_*) + modos paraguas
+function famLabel(k){
+  if (k === 'todas')     return 'todas';
+  if (k === 'BAILES')    return '★ todos los bailes';
+  if (k === 'EMOCIONES') return '★ todas las emociones';
+  return k.replace(/^baile_/, '').replace(/^emo_/, '').replace(/_/g, ' ');
+}
 (function buildFamilySelect(){
   const sel = $('s-fam'); if (!sel) return;
   sel.innerHTML = '';
-  for (const k of ['todas', ...Object.keys(MOTIONS)]){
-    const o = document.createElement('option'); o.value = k; o.textContent = FAM_LABELS[k] || k; sel.appendChild(o);
-  }
+  const opt = (k, parent) => { const o = document.createElement('option'); o.value = k; o.textContent = famLabel(k); (parent || sel).appendChild(o); };
+  ['todas', 'BAILES', 'EMOCIONES'].forEach(k => opt(k));
+  const keys = Object.keys(MOTIONS);
+  const bailes = keys.filter(k => k.startsWith('baile_')).sort();
+  const emos   = keys.filter(k => k.startsWith('emo_')).sort();
+  if (bailes.length){ const g = document.createElement('optgroup'); g.label = '— bailes —'; bailes.forEach(k => opt(k, g)); sel.appendChild(g); }
+  if (emos.length){   const g = document.createElement('optgroup'); g.label = '— emociones —'; emos.forEach(k => opt(k, g)); sel.appendChild(g); }
 })();
 $('reroll').onclick = randomizeAll;       // RANDOM: nueva composición
 $('s-auto').onchange = e => { autoRandom = e.target.checked; if (autoRandom) scheduleAuto(performance.now()); };

@@ -247,6 +247,10 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <input id="s-bright" type="range" min="-1" max="1" step="0.01" value="1">
     </div>
     <div class="ctl">
+      <label>tono de cuerpo <span class="val" id="v-tono">79</span></label>
+      <input id="s-tono" type="range" min="0" max="1" step="0.01" value="0.79">
+    </div>
+    <div class="ctl">
       <label>color luz</label>
       <input id="c-strobe" type="color" value="#ffffff">
     </div>
@@ -323,6 +327,7 @@ const cfg = Object.assign({}, DEFAULTS, (window.CONFIG || {}));
 let BPM          = cfg.bpm;
 let COUNT        = cfg.cuerpos;
 let masterBright = cfg.luzGeneral / 100;        // general dimmer (1 = full, →0 = almost black)
+let bodyTone     = (cfg.colorPiel ?? 79) / 100; // tono de cuerpo: 0 = negro · 1 = porcelana blanca
 let strobeColor  = clampColor(parseInt(String(cfg.colorLuz).slice(1), 16));  // tint (dark / desaturated)
 let rotRand      = cfg.rotacionAzar / 100;      // 0 = all same way, 1 = fully random
 let closeness    = cfg.cercania / 100;          // 0 = packed blob, 1 = scattered
@@ -881,7 +886,7 @@ function setBg(hex){
 }
 function applyBodyLook(){
   if (!bodyMat) return;
-  bodyMat.color.setHex(0xc9c9cd);   // arcilla con sombreado (conserva detalle en cualquier modo)
+  bodyMat.color.setRGB(bodyTone, bodyTone, bodyTone);   // tono de cuerpo: 0 = negro · 1 = porcelana blanca
   bodyMat.roughness = 0.92;
   bodyMat.metalness = 0.0;
   bodyMat.needsUpdate = true;
@@ -1040,6 +1045,7 @@ $('strobe').onclick = () => setStrobe(!strobeOn);
 $('s-bpm').oninput = e => { BPM = +e.target.value; $('v-bpm').textContent = BPM; };
 $('s-count').oninput = e => { COUNT = +e.target.value; $('v-count').textContent = COUNT; $('m-count').textContent = COUNT; placeCrowd(COUNT); };
 $('s-bright').oninput = e => { masterBright = +e.target.value; $('v-bright').textContent = Math.round(masterBright*100); refreshStatic(); applyBodyLook(); };
+$('s-tono').oninput   = e => { bodyTone = +e.target.value; $('v-tono').textContent = Math.round(bodyTone*100); applyBodyLook(); };
 $('c-strobe').oninput = e => {
   strobeColor = clampColor(parseInt(e.target.value.slice(1), 16));
   e.target.value = '#' + strobeColor.toString(16).padStart(6,'0');   // refleja el valor restringido
@@ -1114,6 +1120,7 @@ function syncUI(){
   set('s-count', COUNT);   $('v-count').textContent = COUNT; $('m-count').textContent = COUNT;
   set('s-bpm', BPM);       $('v-bpm').textContent = BPM;
   set('s-bright', masterBright); $('v-bright').textContent = Math.round(masterBright*100);
+  set('s-tono', bodyTone);       $('v-tono').textContent   = Math.round(bodyTone*100);
   set('c-strobe', '#' + strobeColor.toString(16).padStart(6,'0'));
   set('s-rot', rotRand);   $('v-rot').textContent = Math.round(rotRand*100);
   set('s-close', closeness); $('v-close').textContent = Math.round(closeness*100);

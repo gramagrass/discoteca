@@ -28,6 +28,7 @@ window.CONFIG = {
 
   // luz / estrobo
   luzGeneral:         -100,    // -100..100 (bajo cero: cuerpos oscuros translúcidos)
+  colorPiel:          79,    // tono de cuerpo (0 = negro · 100 = porcelana blanca)
   colorLuz:           "#c2c2c2",    // color del estrobo / luz
   bpm:                112,    // pulso de luces/audio
   estroboVel:         7.5,    // destellos por segundo

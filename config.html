@@ -136,7 +136,7 @@ const DEFAULTS = {
   rotacionAzar:100, cercania:14, tamanoAzar:0,
   vistaCamara:'sobrevuelo', camVelocidad:40,
   camAngulo:293, camAltura:2, camZoom:3.8,
-  luzGeneral:98, colorLuz:'#ffffff', bpm:112,
+  luzGeneral:98, colorPiel:79, colorLuz:'#ffffff', bpm:112,
   estroboVel:7.5, estroboIntensidad:1.6, luzBase:33,
   estrobo:false, sonido:false, piso:false, autoRandom:false, autoRandomSeg:10,
   capaNiebla:false, capaGrade:false, capaBloom:false, fps:false,
@@ -172,6 +172,7 @@ const SECTIONS = [
   ]],
   ['luz / estrobo', [
     ['luzGeneral','luz general',-100,100,1,'-100..100 (bajo cero: cuerpos oscuros translúcidos)'],
+    ['colorPiel','tono de cuerpo',0,100,1,'tono de cuerpo (0 = negro · 100 = porcelana blanca)'],
     ['colorLuz','color luz','color',0,0,'color del estrobo / luz'],
     ['bpm','bpm',70,140,1,'pulso de luces/audio'],
     ['estroboVel','estrobo vel',0.5,20,0.1,'destellos por segundo'],

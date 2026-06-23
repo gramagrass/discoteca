@@ -250,6 +250,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <label>tono de cuerpo <span class="val" id="v-tono">79</span></label>
       <input id="s-tono" type="range" min="0" max="1" step="0.01" value="0.79">
     </div>
+    <label class="chk"><input type="checkbox" id="l-floor" checked> plantar pies en el piso</label>
     <div class="ctl">
       <label>color luz</label>
       <input id="c-strobe" type="color" value="#ffffff">
@@ -329,6 +330,7 @@ let BPM          = cfg.bpm;
 let COUNT        = cfg.cuerpos;
 let masterBright = cfg.luzGeneral / 100;        // general dimmer (1 = full, →0 = almost black)
 let bodyTone     = (cfg.colorPiel ?? 79) / 100; // tono de cuerpo: 0 = negro · 1 = porcelana blanca
+let floorPlant   = cfg.plantarPies ?? true;     // mantener los pies en el piso cada frame
 let strobeColor  = clampColor(parseInt(String(cfg.colorLuz).slice(1), 16));  // tint (dark / desaturated)
 let rotRand      = cfg.rotacionAzar / 100;      // 0 = all same way, 1 = fully random
 let closeness    = cfg.cercania / 100;          // 0 = packed blob, 1 = scattered
@@ -677,6 +679,7 @@ function placeCrowd(n){
     const body = cloneSkinned(ri(bodies));
     const root = new THREE.Group();
     root.add(body);
+    const feet = []; body.traverse(o => { if (o.isBone && /foot|toe/i.test(o.name)) feet.push(o); });   // para plantar pies
     // stable per-figure seeds so moving a slider rearranges smoothly, not randomly
     root.userData.seed = {
       r:     Math.sqrt(Math.random()),   // uniform fill of a disc
@@ -687,7 +690,7 @@ function placeCrowd(n){
     };
     scene.add(root);
     const mixer = new THREE.AnimationMixer(root);
-    crowd.push({ root, mixer, action: null });
+    crowd.push({ root, mixer, action: null, body, feet });
   }
   applyLayout();
   assignDances();
@@ -939,6 +942,16 @@ let lastReadout = 0;
 let fpsT = 0, fpsFrames = 0;
 const fpsEl = document.getElementById('fps');
 let flashId = -1, flashAmp = 1;
+// plantar pies: cada frame, baja/sube el cuerpo dentro de su grupo para que el pie
+// más bajo apoye en el piso (corrige que el clip lo deje colgado o atraviese el suelo).
+const _fp = new THREE.Vector3();
+function groundFeet(c){
+  if (!c.feet || !c.feet.length) return;
+  c.root.updateMatrixWorld(true);
+  let minY = Infinity;
+  for (const fb of c.feet){ fb.getWorldPosition(_fp); c.root.worldToLocal(_fp); if (_fp.y < minY) minY = _fp.y; }
+  if (isFinite(minY)) c.body.position.y -= (minY - 0.06);   // 0.06 = suela bajo el hueso del pie
+}
 function tick(now){
   const dt = Math.min(0.05, (now - prev) / 1000); prev = now;
   fpsFrames++;
@@ -949,6 +962,7 @@ function tick(now){
   if (autoRandom && now >= nextAuto){ randomizeAll(); scheduleAuto(now); }   // re-roll automático
 
   for (const c of crowd) c.mixer.update(dt * animSpeed);   // velocidad global del baile
+  if (floorPlant) for (const c of crowd) groundFeet(c);    // mantener los pies en el piso
 
   // cambio de baile espontáneo por modelo (proceso probabilístico → tiempos dispares)
   if (danceChange > 0 && allClips.length){
@@ -1076,6 +1090,7 @@ $('s-bpm').oninput = e => { BPM = +e.target.value; $('v-bpm').textContent = BPM;
 $('s-count').oninput = e => { COUNT = +e.target.value; $('v-count').textContent = COUNT; $('m-count').textContent = COUNT; placeCrowd(COUNT); };
 $('s-bright').oninput = e => { masterBright = +e.target.value; $('v-bright').textContent = Math.round(masterBright*100); refreshStatic(); applyBodyLook(); };
 $('s-tono').oninput   = e => { bodyTone = +e.target.value; $('v-tono').textContent = Math.round(bodyTone*100); applyBodyLook(); };
+$('l-floor').onchange = e => { floorPlant = e.target.checked; };
 $('c-strobe').oninput = e => {
   strobeColor = clampColor(parseInt(e.target.value.slice(1), 16));
   e.target.value = '#' + strobeColor.toString(16).padStart(6,'0');   // refleja el valor restringido
@@ -1151,6 +1166,7 @@ function syncUI(){
   set('s-bpm', BPM);       $('v-bpm').textContent = BPM;
   set('s-bright', masterBright); $('v-bright').textContent = Math.round(masterBright*100);
   set('s-tono', bodyTone);       $('v-tono').textContent   = Math.round(bodyTone*100);
+  { const c = $('l-floor'); if (c) c.checked = floorPlant; }
   set('c-strobe', '#' + strobeColor.toString(16).padStart(6,'0'));
   set('s-rot', rotRand);   $('v-rot').textContent = Math.round(rotRand*100);
   set('s-close', closeness); $('v-close').textContent = Math.round(closeness*100);

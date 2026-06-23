@@ -47,7 +47,7 @@ window.CONFIG = {
 
   // modo
   estrobo:            true,    // arrancar en modo estrobo
-  sonido:             false,    // arrancar con sonido (suena al primer clic)
+  sonido:             true,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
   autoRandom:         true,    // re-roll automático cada cierto tiempo
   panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto)

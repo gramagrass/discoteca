@@ -108,7 +108,9 @@
     position:fixed; top:12px; right:12px; z-index:11; width:38px; height:38px;
     font-size:16px; color:var(--ink); background:rgba(5,5,7,0.85); backdrop-filter:blur(8px);
     border:1px solid var(--line); border-radius:6px; cursor:pointer; line-height:1;
+    opacity:0; pointer-events:none; transition:opacity .3s ease;   /* oculto: escritorio usa H; móvil aparece al tocar */
   }
+  #panelBtn.show{ opacity:1; pointer-events:auto; }
   #panelBtn:hover{ border-color:var(--ink); }
 </style>
 </head>
@@ -688,7 +690,11 @@ function placeCrowd(n){
     };
     scene.add(root);
     const mixer = new THREE.AnimationMixer(root);
-    crowd.push({ root, mixer, action: null, body, feet });
+    const entry = { root, mixer, action: null, body, feet };
+    crowd.push(entry);
+    // al terminar un segmento, cruza al siguiente (otro al azar de la familia activa)
+    // → flujo continuo sin el corte seco del loop. El guard evita encadenar dos veces.
+    mixer.addEventListener('finished', (e) => { if (e.action === entry.action) setModelDance(entry, ri(activePool()).clip, 0); });
   }
   applyLayout();
   assignDances();
@@ -763,7 +769,8 @@ function setModelDance(c, clip, phaseMul = 1, scatterMul = 1){
   const prev = c.action;
   const action = c.mixer.clipAction(clip);
   action.reset();                                   // tras reset, peso = 1
-  action.setLoop(THREE.LoopRepeat, Infinity);
+  action.setLoop(THREE.LoopOnce, 1);                // no loopea: al terminar, encadena al siguiente (cross-fade)
+  action.clampWhenFinished = true;
   action.timeScale = 1 + rf(-0.08, 0.08) * scatterMul;
   action.time = clip.duration * Math.random() * phaseMul;
   if (prev && prev !== action){                     // cruce entre dos movimientos (sin T-pose)
@@ -1132,6 +1139,12 @@ $('sound').onclick = () => {
 const ui = document.getElementById('ui');
 if (!panelVisible) ui.classList.add('hidden');            // móvil / config: panel oculto al inicio
 $('panelBtn').onclick = () => ui.classList.toggle('hidden');
+// El botón ☰ NO se muestra en escritorio (usá la tecla H). En móvil aparece unos
+// segundos al tocar/arrastrar la pantalla, para poder abrir el panel.
+if (isMobile){
+  const pb = $('panelBtn'); let hideT;
+  addEventListener('pointerdown', () => { pb.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => pb.classList.remove('show'), 3000); }, { passive: true });
+}
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (k === 'r'){ e.preventDefault(); randomizeAll(); }            // tirar dados

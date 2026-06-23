@@ -793,7 +793,7 @@ function assignDances(){
 
 // generador aleatorio por parámetro (cada uno setea su variable)
 const RANDOMIZERS = {
-  cuerpos:           () => { COUNT = 6 + (Math.random() * 25 | 0); },
+  cuerpos:           () => { COUNT = 1 + (Math.random() * 30 | 0); },   // 1–30: a veces solos o dúos
   familia:           () => { activeFamily = ri(['todas', 'BAILES', 'EMOCIONES']); },
   coreografia:       () => { choreo = Math.random(); },
   cambioBaile:       () => { danceChange = Math.random() * 0.6; },

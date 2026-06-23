@@ -1,5 +1,17 @@
-/* personajes (cuerpos) — pipeline SMPL-X v2. Nombres en assets/bodies/ sin .glb */
+/* cuerpos SMPL-X v2 — variados (genero x delgado/promedio/robusto/obeso + random). */
 window.MODELS = [
-  "smplx_body"
+  "f_avg",
+  "f_heavy",
+  "f_obese",
+  "f_rand",
+  "f_thin",
+  "m_avg",
+  "m_heavy",
+  "m_obese",
+  "m_rand",
+  "m_thin",
+  "n_avg",
+  "n_petite",
+  "n_rand",
+  "n_tall"
 ];
-// (cuerpos variados SMPL: a generar -> agregar nombres aquí)

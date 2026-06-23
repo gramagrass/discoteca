@@ -368,9 +368,12 @@ const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
 const CLOSE_MIN = 0.05, CLOSE_MAX = 12;   // en 0 todos se juntan en el centro
 
 // ---------------------------------------------------------------- asset urls (locales; servidos desde ./assets)
-const MODELS = window.MODELS || ['Masculine', 'Feminine'];
-// cada entrada puede ser un nombre local (assets/bodies/NOMBRE.glb) o una URL completa
-// (p. ej. un avatar de Ready Player Me: https://models.readyplayer.me/ID.glb)
+// helper de mezcla (subconjuntos aleatorios por sesión)
+const shufArr = arr => { for (let i = arr.length - 1; i > 0; i--){ const j = (Math.random() * (i + 1)) | 0; [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+const ALL_MODELS = window.MODELS || ['Masculine', 'Feminine'];
+// cargar un SUBCONJUNTO ALEATORIO de cuerpos por sesión (variedad sin cargar los 14)
+const MAX_BODIES = 8;
+const MODELS = shufArr([...ALL_MODELS]).slice(0, MAX_BODIES);
 const BODY_URLS = MODELS.map(n => /^https?:/.test(n) ? n : `./assets/bodies/${n}.glb`);
 // movimientos por familia, desde el manifiesto motions.js (dance/idle/locomotion/expression)
 const MOTIONS = window.MOTIONS || { dance: [], idle: [], locomotion: [], expression: [] };
@@ -379,7 +382,6 @@ const MOTIONS = window.MOTIONS || { dance: [], idle: [], locomotion: [], express
 // sitio trae una mezcla distinta de danzas. Tope por danza + tope total.
 const MAX_PER_FAM = 2;     // hasta N segmentos por danza
 const MAX_CLIPS   = 40;    // tope total de clips por sesión
-const shufArr = arr => { for (let i = arr.length - 1; i > 0; i--){ const j = (Math.random() * (i + 1)) | 0; [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
 const MOTION_ENTRIES = [];
 {
   const pool = [];

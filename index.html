@@ -772,7 +772,7 @@ function setModelDance(c, clip, phaseMul = 1, scatterMul = 1){
   action.setLoop(THREE.LoopOnce, 1);                // no loopea: al terminar, encadena al siguiente (cross-fade)
   action.clampWhenFinished = true;
   action.timeScale = 1 + rf(-0.08, 0.08) * scatterMul;
-  action.time = clip.duration * Math.random() * phaseMul;
+  action.time = clip.duration * Math.random() * 0.4 * phaseMul;   // desfase en el primer 40% → no arranca cerca del final
   if (prev && prev !== action){                     // cruce entre dos movimientos (sin T-pose)
     prev.fadeOut(0.4);
     action.fadeIn(0.4);

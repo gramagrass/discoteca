@@ -10,7 +10,7 @@ window.CONFIG = {
   coreografia:        100,    // 0 = todos el mismo baile · 100 = cada quien el suyo
   cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
   movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
-  noise:              10,    // ruido de película (0 = off)
+  noise:              30,    // ruido de película (0 = off)
   autoRandomSeg:      10,    // intervalo del auto-random en segundos
 
   // espacio
@@ -46,7 +46,7 @@ window.CONFIG = {
   ditherContraste:    60,    // contraste del dither orgánico
 
   // modo
-  estrobo:            false,    // arrancar en modo estrobo
+  estrobo:            true,    // arrancar en modo estrobo
   sonido:             false,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
   autoRandom:         true,    // re-roll automático cada cierto tiempo

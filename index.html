@@ -15,7 +15,9 @@
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; height:100%; background:#050507; overflow:hidden; }
-  canvas{ display:block; }
+  canvas{ display:block; touch-action:none; }
+  /* en pantalla completa el cursor del mouse se oculta sobre la obra (la UI conserva el suyo) */
+  :fullscreen canvas, :-webkit-full-screen canvas{ cursor:none; }
   #ui{
     position:fixed; inset:0; pointer-events:none; z-index:5;
     font-family:"JetBrains Mono", ui-monospace, monospace;
@@ -847,6 +849,21 @@ function newTvShot(now){
 let dragging = false, lastX = 0, lastY = 0;
 renderer.domElement.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
 addEventListener('pointerup', () => dragging = false);
+
+// doble-tap (táctil) → nuevo RANDOM. Mantiene el arrastre de 1 dedo para rotar la cámara:
+// solo cuenta como "tap" si el dedo casi no se movió entre tocar y soltar.
+let tapTime = 0, tapX = 0, tapY = 0, tapDownX = 0, tapDownY = 0;
+renderer.domElement.addEventListener('pointerdown', e => { tapDownX = e.clientX; tapDownY = e.clientY; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (e.pointerType === 'mouse') return;                                                       // solo gestos táctiles
+  if (Math.hypot(e.clientX - tapDownX, e.clientY - tapDownY) > 18){ tapTime = 0; return; }     // fue arrastre → no es tap
+  const now = performance.now();
+  if (now - tapTime < 320 && Math.hypot(e.clientX - tapX, e.clientY - tapY) < 60){
+    tapTime = 0; randomizeAll();                                                               // 2º toque rápido y cercano → dados
+  } else {
+    tapTime = now; tapX = e.clientX; tapY = e.clientY;                                         // 1er toque
+  }
+});
 addEventListener('pointermove', e => {
   if (!dragging) return;
   cam.mAz -= (e.clientX - lastX) * 0.005;                                  // arrastre horizontal → offset de azimut
@@ -1139,11 +1156,10 @@ $('sound').onclick = () => {
 const ui = document.getElementById('ui');
 if (!panelVisible) ui.classList.add('hidden');            // móvil / config: panel oculto al inicio
 $('panelBtn').onclick = () => ui.classList.toggle('hidden');
-// El botón ☰ NO se muestra en escritorio (usá la tecla H). En móvil aparece unos
-// segundos al tocar/arrastrar la pantalla, para poder abrir el panel.
+// El botón ☰ NO se muestra en escritorio (usá la tecla H). En móvil se elimina por completo:
+// la pantalla queda limpia y el doble-tap dispara un nuevo RANDOM (ver más abajo).
 if (isMobile){
-  const pb = $('panelBtn'); let hideT;
-  addEventListener('pointerdown', () => { pb.classList.add('show'); clearTimeout(hideT); hideT = setTimeout(() => pb.classList.remove('show'), 3000); }, { passive: true });
+  $('panelBtn').style.display = 'none';
 }
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
@@ -1227,10 +1243,10 @@ function armMotion(){
     addEventListener('devicemotion', onMotion);
   }
 }
-// resume audio + armar el sensor de movimiento en el primer toque (iOS exige gesto)
+// reanuda el audio en el primer toque (el "shake" se reemplazó por doble-tap; ya no se pide
+// permiso de movimiento para no mostrar un diálogo que no hacía nada en iOS)
 addEventListener('pointerdown', () => {
   if (audio && audio.state === 'suspended') audio.resume();
-  armMotion();
 });
 
 // ---------------------------------------------------------------- boot

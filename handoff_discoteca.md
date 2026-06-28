@@ -1,85 +1,97 @@
 # Handoff — DISCO.GRAMA.CO (discoteca)
 
-Pieza de arte generativa en Three.js: una multitud de figuras humanoides ejecutando
-mocap (baile / locomoción / gestos / idle / físico) en un espacio atmosférico con luces.
-Desplegada en **disco.grama.co** vía GitHub Pages.
+Pieza de arte generativo en Three.js: una multitud de figuras humanoides grises ("clay")
+ejecutando captura de movimiento (baile / emociones) en un espacio atmosférico con luces y
+estrobo. Desplegada en **disco.grama.co** vía GitHub Pages.
+
+> **Hay DOS versiones vivas, ambas funcionando:**
+> - **v2 (actual)** = la raíz del repo → `disco.grama.co`. Cuerpos SMPL-X + bailes DanceDB.
+> - **v1 (congelada)** = carpeta `backup-v1/` → `disco.grama.co/backup-v1/`. Cuerpos RPM + bailes Mixamo/RPM.
+> Cada versión es **autocontenida** (su propio `index.html`, manifiestos y `assets/`). Tocar una no rompe la otra.
 
 ---
 
 ## 1. Despliegue
 - **Repo:** `gramagrass/discoteca` (cuenta de usuario, NO org), rama **main**.
-- **Hosting:** GitHub Pages. `CNAME` = `disco.grama.co`.
+- **Hosting:** GitHub Pages. `CNAME` = `disco.grama.co`. Pages sirve toda la raíz, así que
+  `backup-v1/` queda automáticamente accesible en `disco.grama.co/backup-v1/`.
 - **Three.js:** r0.160.0 por importmap (jsdelivr). Todo lo demás (cuerpos, movimientos) es self-hosted.
 - **Guardar config desde el editor:** `config.html` tiene un botón que escribe `config.js` vía
   GitHub Contents API. Requiere un **PAT fine-grained** (Contents: read+write) sobre el repo
   `discoteca`. El token lo pega el usuario en el editor; Claude no lo maneja.
 - Cuidado: el usuario tuvo un repo vacío llamado `disco` por error — el correcto es **discoteca**.
 
-## 2. Archivos (raíz = lo que se publica)
+## 2. Estructura de archivos (raíz = lo que se publica)
+**v2 (raíz):**
 - **`index.html`** — la obra entera (toda la lógica en un `<script type="module">`).
-- **`config.js`** — estado inicial (`window.CONFIG`). Lo regenera el editor.
+- **`config.js`** — estado inicial (`window.CONFIG`). Lo regenera `config.html`.
 - **`config.html`** — editor visual de config + checkboxes de RANDOM por parámetro + guardado a GitHub.
 - **`models.js`** — `window.MODELS = [...]` manifiesto de cuerpos (nombres sin `.glb`).
 - **`motions.js`** — `window.MOTIONS = {familia: [nombres]}` manifiesto de movimientos.
-- **`assets/bodies/*.glb`** — 7 cuerpos RPM activos (~7MB).
-- **`assets/motions/{dance,locomotion,idle,expression,fisico}/*.glb`** — clips.
-- **`backup-v1/`** — v1 congelada (incl. `assets/dances/` con los 15 bailes originales RPM).
-- **`_local/`** — **gitignored** (NO se publica): herramientas y descargas crudas.
+- **`assets/bodies/*.glb`** — 14 cuerpos SMPL-X (~variados).
+- **`assets/motions/<familia>/*.glb`** — 574 clips en 45 familias.
 
-## 3. Cuerpos — 7 activos (solo RPM)
-Todos comparten el rig RPM/Wolf3D (nombres de hueso "bare": `Hips`, `Spine`, `LeftArm`…). El
-pipeline **renombra** cualquier prefijo `mixamorig\d*:?` → bare, **descarta texturas** (la obra los
-pinta gris "clay") y la obra **normaliza la altura** de cada uno.
+**v1 (congelada):**
+- **`backup-v1/`** — copia completa y autocontenida de la v1 (su `index.html`, `config.js`,
+  `models.js`, `motions.js` y `assets/` propios). NO comparte assets con la raíz.
 
-**Decisión del usuario:** quedarse SOLO con cuerpos RPM (A-pose) porque lucen impecables con los
-bailes; los Mixamo (T-pose) tenían leve tensión de hombro. Los Mixamo se apartaron (no borrados).
+**Docs y otros:**
+- `handoff_discoteca.md` (este archivo), `MIXAMO.md`, `bases_de_movimiento.md` — notas de proceso.
+- **`_local/`** — **gitignored** (NO se publica): herramientas, descargas crudas, modelos SMPL-X,
+  el dataset DanceDB, builds intermedios y `_local/archive_v0/` (ver §8, limpieza).
 
-- **Activos (7, en `assets/bodies/`):** `Masculine`, `Feminine` (RPM TPose originales) +
-  `GothicGirl`, `Julia`, `Andra`, `Harry`, `Chen` (avatares RPM bajados de Sketchfab por el usuario;
-  fuentes en `_local/rpm_models/*/source/*.glb`).
-- **Apartados para uso futuro (NO se cargan):**
-  - `_local/bodies_mixamo/` → los 11 Mixamo `Ch01…Ch49` (convertidos con FBX2glTF, ver §6).
-  - `_local/bodies_unused/` → `Cyberpunk` y `CyberMale` (avatares RPM que el usuario sacó: "weird").
-- Reactivar uno: copiar su `.glb` a `assets/bodies/` y agregar el nombre a `models.js`.
+## 3. v2 — Cuerpos (14 SMPL-X)
+Generados con el modelo paramétrico **SMPL-X** (variando género y complexión). Nombres en `models.js`:
+- género: `m_` masculino · `f_` femenino · `n_` neutro.
+- complexión: `thin` · `avg` · `heavy` · `obese` · `petite` · `tall` · `rand` (aleatorio).
+- Lista: `f_avg f_heavy f_obese f_rand f_thin · m_avg m_heavy m_obese m_rand m_thin · n_avg n_petite n_rand n_tall`.
+- Pipeline (en `index.html`): renombra cualquier prefijo `mixamorig:` → "bare", **descarta texturas**
+  (los pinta gris clay `0xc9c9cd`) y **normaliza la altura** de cada cuerpo. La variedad viene de la
+  FORMA/silueta, no del color.
 
-## 4. Movimientos (manifiesto: 112 clips en 5 familias)
-`dance:15  locomotion:34  idle:18  expression:15  fisico:30`
-- **`dance` = los 15 bailes de la v1** (RPM, `M_Dances_*`/`F_Dances_*`), por preferencia del
-  usuario (los considera mejores que los de Mixamo). Copiados desde `backup-v1/assets/dances/`.
-- **locomotion / idle / expression / fisico = Mixamo**, convertidos del bulk FBX (ver §6).
-- El **selector de familia es dinámico** (se arma desde `Object.keys(MOTIONS)` en `index.html`),
-  con etiquetas en `FAM_LABELS` (dance→baile, fisico→físico…). Opciones: "todas" + cada familia.
-- Nota: en disco hay más GLB que los listados (clips Mixamo viejos quedaron); **`motions.js` es
-  la fuente de verdad** — solo se cargan los listados ahí.
+## 4. v2 — Movimientos (574 clips, 45 familias)
+Segmentos de **DanceDB** (mocap real, AMASS) reorientados al rig y cortados en segmentos ≥15 s.
+Dos grupos semánticos:
+- **`baile_*` — 29 familias, 320 clips:** bachata, capoeira, dimitroula, flamenco, haniotikos,
+  hasapiko, hiphop, karsilamas, kolo, laziotikos, maleviziotikos, mix, musical, outsai, pastirske,
+  podaraki, rasopoulos, reggaeton, rnb, roditikos, salsa, syrtos, tatsia, tsamiko, zaloggo,
+  zeibekiko, zonaradiko, zorbas, zumba. (Muchos son bailes folclóricos griegos.)
+- **`emo_*` — 16 familias, 254 clips:** afraid, angry, annoyed, bored, curiosity, excited, happy,
+  miserable, nervous, neutral, pleased, relaxed, sad, satisfied, scary, tired.
+- El **selector de familia es dinámico** (se arma desde `Object.keys(MOTIONS)`), con dos modos
+  paraguas: **`BAILES`** (todos los `baile_*`) y **`EMOCIONES`** (todos los `emo_*`), más `todas`.
+- **`motions.js` es la fuente de verdad** — solo se carga lo listado ahí. Estado actual: el disco
+  está limpio, los 574 GLB en disco coinciden exactamente con el manifiesto (0 huérfanos).
+- `config.js → familia` admite: `todas | BAILES | EMOCIONES | <familia baile_*/emo_*>`. (Default actual: `BAILES`.)
 
-## 5. Decisiones técnicas clave / gotchas (IMPORTANTE)
+## 5. v1 — qué contiene `backup-v1/`
+- **Cuerpos:** su `models.js` carga 2 (`Masculine`, `Feminine`, RPM TPose). En su `assets/bodies/`
+  hay además 5 avatares RPM (`GothicGirl, Julia, Andra, Harry, Chen`) disponibles para reactivar
+  agregándolos a su `models.js`.
+- **Movimientos:** 112 clips en 5 familias — `dance:15 locomotion:34 idle:18 expression:15 fisico:30`.
+  `dance` = los 15 bailes RPM (`M_Dances_*`/`F_Dances_*`); el resto son Mixamo convertidos.
+- Es la versión que el usuario prefería por la **pulcritud de los bailes RPM**; se congeló al pasar a v2.
+
+## 6. Decisiones técnicas clave / gotchas (válidas para AMBAS versiones)
 - **`neutralizeRoot(clip)` quita TODAS las pistas `.position`** (solo la cadera las tiene). Así el
   clip **solo rota** los huesos y cada cuerpo se para a su altura de bind, sin importar si el clip
-  viene en cm (Mixamo, cadera ~124) o m (RPM, ~1). Movimiento en el sitio, sin deriva. NO volver a
-  conservar la Y de la cadera: rompe (manda cuerpos RPM a 124 m de altura).
+  viene en cm o m. Movimiento en el sitio, sin deriva. NO volver a conservar la Y de la cadera.
 - **Cada cuerpo va envuelto en un `THREE.Group`** en `placeCrowd`. La obra escala/orienta el GRUPO
   (no el cuerpo), así no pisa la escala/rotación natural de modelos de distinta convención. El
   `AnimationMixer` se crea sobre el grupo (liga huesos por nombre).
-- **Normalización de altura** en `loadAssets`: mide `bodies[0]` (Masculine) como `TARGET_H` (~1.84m),
-  escala cada cuerpo a esa altura, lo centra en XZ y le pone los pies en y=0. Esto absorbe que RPM
-  esté en metros y Mixamo en cm, y que algunos tengan rotación de raíz.
-- **Sobre la "deformación de hombros" de los Mixamo (resuelto/entendido):** se verificó
-  numéricamente que el ESQUELETO se posa idéntico al cuerpo RPM limpio (0° de diferencia en la
-  dirección del brazo). O sea NO es un problema de pose/retarget. La compensación de pose de reposo
-  fue PROBADA y **EMPEORA** (descartada). La causa real es la calidad del *skinning* + el bind en
-  T-pose. Los avatares RPM (A-pose) no tienen el problema. Por eso los bailes v1 lucen impecables en
-  RPM y con leve tensión de hombro en Mixamo. **No reintentar "rest-pose compensation".**
-- **Material clay** uniforme (`0xc9c9cd`, roughness alto) sobre todas las mallas: la variedad viene de
-  la FORMA/silueta, no del color/textura. Por eso da igual perder las texturas al convertir.
-- **Blur general** (`blurGen`, default 0): slider en panel (sección render) + `config.js` + editor.
-  Aplica `filter: blur(blurGen*40 px)` al canvas (`renderer.domElement`) vía `applyBlur()` — mismo
-  desenfoque que el panel, solo sobre la imagen 3D (la UI queda nítida). 0 = nítido.
-- **Zoom de cámara (radio):** mín 0.4 (detalle cercano, conservar) — máx duro 13 (antes 28). Modos
-  automáticos `sobrevuelo`/`tv` acotados a `rf(1.1, 7)` (antes ~12/11) para evitar tomas muy lejanas.
-  Rueda del mouse: 0.4–13. Si se quiere aún más cercano de promedio, bajar el `7`.
+- **Normalización de altura** en `loadAssets`: mide el primer cuerpo como `TARGET_H`, escala cada
+  cuerpo a esa altura, lo centra en XZ y le pone los pies en y=0.
+- **Material clay** uniforme (`0xc9c9cd`, roughness alto) sobre todas las mallas. Por eso da igual
+  perder texturas al convertir.
+- **Carga resiliente** (`loadSafe` por cuerpo): si un cuerpo falla, se omite, la obra no rompe.
+- **Blur general** (`blurGen`, default 0): aplica `filter: blur()` al canvas vía `applyBlur()`.
+- **Zoom de cámara (radio):** mín 0.4 — máx 13. Modos automáticos `sobrevuelo`/`tv` acotados a ~1.1–7.
+- **Sobre los hombros de Mixamo (de la v1, resuelto):** la causa era el *skinning*/bind en T-pose, NO
+  el retarget. La "rest-pose compensation" fue probada y EMPEORA — **no reintentar**. Los cuerpos
+  A-pose (RPM v1 / SMPL-X v2) no tienen el problema.
 
-## 6. Pipeline de conversión in-sandbox (RECREAR — los scripts viven en /tmp y se borran)
-Three.js puede parsear FBX y exportar GLB en Node con shims de DOM. Setup:
+## 7. Pipeline de conversión in-sandbox (RECREAR — los scripts viven en /tmp y se borran)
+Three.js puede parsear FBX/GLB y exportar GLB en Node con shims de DOM. Setup:
 ```
 cd /tmp && mkdir fbxprobe && cd fbxprobe && npm i three@0.160.0
 ```
@@ -92,54 +104,46 @@ function imgStub(){const o={width:1,height:1,complete:true,_cbs:{},addEventListe
 globalThis.Image=function(){return imgStub();};
 globalThis.document={createElementNS:()=>imgStub(),createElement:t=>t==='canvas'?{getContext:()=>({drawImage(){},getImageData:()=>({data:new Uint8Array(4)})}),toDataURL:()=>''}:imgStub()};
 ```
-**Receta general (cualquier cuerpo o clip):**
-1. `new FBXLoader().parse(arrayBuffer,'')` (animaciones FBX) o `new GLTFLoader().parse(...)` (GLB).
-2. `traverse`: si `o.name` matchea `/^mixamorig\d*:?/i` → reemplazar por '' (huesos bare).
-   Para clips, también: `clip.tracks.forEach(t=>t.name=t.name.replace(/^mixamorig\d*:?/i,''))`.
-3. Cuerpos: `o.material = clay`; `o.geometry.morphAttributes={}`; quitar morphs; `g.animations=[]`.
-4. `new GLTFExporter().parse(g, onDone, onErr, {binary:true, animations: clipsSiHay})`.
-- **Sandbox ARM (aarch64): NO corre binarios x86** (fbx2gltf, chromium) → **no se puede render-testear**.
-  Validación solo numérica: `node --check`, cruces de IDs, `Box3.setFromObject` + posar con
-  `AnimationMixer` para medir que el rig liga y deforma.
+**Receta general:** parse → renombrar huesos `mixamorig*` → bare → `material=clay` + drop morphs →
+`GLTFExporter.parse(g, …, {binary:true, animations})`. Para clips: filtrar pistas `.position`.
+- **v2 (SMPL-X + DanceDB):** material/datasets crudos en `_local/` (`smplx_model`, `amass/DanceDB`,
+  `smplx_bodies_fbx`, `v2_build`). Reglas: segmentos ≥15 s, compresión meshopt.
+- **v1 (Mixamo):** personajes vía **FBX2glTF** en la Mac del usuario (binario en `_local/`,
+  `--skinning-weights 4`); animaciones bulk en `_local/MixamoHarvester/`.
+- **Sandbox ARM (aarch64): NO corre binarios x86** (fbx2gltf, chromium) → **no render-test**.
+  Validación solo numérica (`node --check`, cruce de IDs, posar con `AnimationMixer`, `Box3`).
 
-**Personajes Mixamo — usar FBX2glTF, no FBXLoader:**
-- El FBXLoader del sandbox, con estos FBX, genera huesos **triplicados** (mismo nombre anidado,
-  nodos identidad — inofensivo pero feo) y **recorta pesos de skinning a 4** → hombros menos pulcros.
-- Vía pulcra: el usuario corre **FBX2glTF en su Mac** (binario `_local/FBX2glTF-macos-x86_64`,
-  script `_local/convertir-fbx2gltf.command`). `FBX2glTF --skinning-weights 4 -b -i X.fbx -o out/X`.
-  Da esqueleto limpio (65 huesos, 0 duplicados, en METROS). Luego en sandbox se procesan esos GLB
-  (renombrar + clay + drop morphs) → `assets/bodies/`. Así se hicieron los Ch##.
-- **Bulk de Mixamo:** `_local/MixamoHarvester/` (parcheado para 1 personaje) bajó ~1287 animaciones
-  FBX (sin skin) a `_local/MixamoHarvester/animations/`. Se curaron/convirtieron 112 (ver §4). Quedan
-  cientos sin usar para más variedad.
+## 8. Limpieza realizada (28-jun-2026)
+Se ordenó el repo dejando solo las dos versiones vivas:
+- **Borrado (basura):** 32 carpetas vacías `"… 2"` (conflictos de sync de macOS) en `assets/motions/`,
+  y todos los `.DS_Store` del árbol.
+- **Movido a `_local/archive_v0/`** (gitignored — fuera del repo y del sitio, pero conservado en disco):
+  los snapshots pre-v1 `disco-grama-co.zip`, `discoteca_grama.zip`, `zibZqQgY` (zip),
+  `discoteca_procedural_backup.html`, la carpeta `build/`, y la carpeta huérfana `assets/dances/`
+  (su contenido vive en `backup-v1/`).
+- **Corregido:** `config.js → familia` pasó de `"dance"` (valor v1, ya inexistente) a `"BAILES"`.
+- **Verificado:** ambas versiones resuelven al 100% (v2: 14 cuerpos + 574 clips; v1: 2 cuerpos +
+  112 clips; 0 archivos faltantes; `node --check` OK en todos los manifiestos).
+- Nota git: los cambios están en el árbol de trabajo (41 borrados + `config.js`) pero **sin commitear/pushear**.
 
-## 7. Restricciones del entorno (sandbox)
+## 9. Restricciones del entorno (sandbox)
 - ARM: no x86 binarios, no GPU, **no render testing**.
-- El mount del usuario: `rm` da "Operation not permitted" hasta habilitar el borrado con la tool
-  **`mcp__cowork__allow_cowork_file_delete`** (ya se habilitó en esta carpeta). Antes de borrar,
-  conviene copiar a `_local/…` por las dudas. Aún quedan GLB viejos en `assets/motions/*` (clips
-  Mixamo sin usar); el manifiesto los ignora.
+- El borrado de archivos en el mount requiere habilitar la tool `mcp__cowork__allow_cowork_file_delete`
+  (ya habilitada en esta carpeta). Antes de borrar algo valioso, copiar a `_local/…`.
 - `_local/` está en `.gitignore` (con `.DS_Store`, `node_modules/`) — no llega al sitio.
 
-## 8. Pendientes / próximos pasos posibles
-- **Carga de subconjunto rotativo:** con 7 cuerpos (~7MB) ya no es urgente, pero el plan sigue:
-  cargar al azar N cuerpos por sesión para variar la multitud entre recargas. NO implementado.
-  La carga es resiliente (`loadSafe` por cuerpo: si uno falla, se omite).
-- **Más cuerpos:** la tubería soporta cualquier FBX Mixamo (vía FBX2glTF) o GLB RPM (Sketchfab/RPM
-  creator). Quedan personajes Mixamo no-humanos (Mutant/robots/criaturas) por sumar si se quiere.
-- **Más bailes Mixamo:** si el usuario quiere recuperar también los 30 bailes Mixamo junto a los 15
-  v1, es trivial sumarlos al manifiesto.
+## 10. Pendientes / próximos pasos posibles
+- **Carga de subconjunto rotativo:** cargar al azar N cuerpos por sesión para variar la multitud.
+  No implementado (la carga ya es resiliente por cuerpo).
+- **Más bailes/emociones:** trivial sumar más segmentos DanceDB al manifiesto v2.
 - **Capas de render experimentales** (DoF / oclusión / god-rays) — diferidas.
-- Posible slider "brillo de cuerpos" en vivo — ofrecido, sin confirmar.
 
-## 9. Estado / preferencias del usuario (David)
+## 11. Estado / preferencias del usuario (David)
 - Comunica en español; prefiere respuestas **directas y concisas**, con calidez.
-- Le importa la **pulcritud visual** (notó la deformación de hombros). Prioriza los **bailes v1**.
+- Le importa la **pulcritud visual**. La obra ya está desplegada y funcionando en disco.grama.co.
 - Trabaja en Mac; corre conversiones locales con su propio token/binarios (Claude no maneja secretos).
-- La obra ya está desplegada y funcionando en disco.grama.co.
 
 ---
-*Estado: 7 cuerpos RPM activos (Mixamo + 2 cyberpunk apartados en `_local/`) y 112 movimientos
-(dance=15 v1, resto Mixamo). Selector de familia dinámico. Clips solo-rotación + cuerpos envueltos y
-normalizados. Agregados: slider "blur general" (default 0) y límites de zoom (máx 13, mín 0.4;
-automáticos acotados a 1.1–7).*
+*Estado: v2 (raíz) = 14 cuerpos SMPL-X + 574 clips DanceDB en 45 familias (29 baile_* / 16 emo_*).
+v1 congelada y autocontenida en `backup-v1/` (servida en `/backup-v1/`). Repo limpio; snapshots
+pre-v1 archivados en `_local/archive_v0/`. Cambios sin pushear.*

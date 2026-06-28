@@ -366,7 +366,14 @@ let bloomFuerza = (cfg.bloomFuerza ?? 50) / 100;   // fuerza del bloom
 let gradeInt    = (cfg.gradeInt    ?? 100) / 100;  // intensidad del grade
 let blurGen     = (cfg.blurGen     ?? 0)  / 100;   // blur general del render (0 = nítido); se aplica como filter CSS al canvas
 // qué parámetros entran al botón RANDOM (configurable en config.html)
-const DEFAULT_RANDOM = { cuerpos:true, coreografia:true, cambioBaile:true, formacion:true, rotacionAzar:true, tamanoAzar:true, luzGeneral:true };
+const DEFAULT_RANDOM = {
+  cuerpos:true, familia:false, coreografia:true, cambioBaile:true, movimiento:false, noise:false,
+  formacion:true, rotacionAzar:true, cercania:false, tamanoAzar:true,
+  vistaCamara:false, camVelocidad:false, camAngulo:false, camAltura:false, camZoom:false,
+  luzGeneral:true, colorPiel:false, colorLuz:false, bpm:false, estroboVel:false, estroboIntensidad:false, luzBase:false,
+  nieblaDens:false, brumaBrillo:false, bloomFuerza:false, gradeInt:false, blurGen:false, ditherModo:false, ditherEscala:false, ditherContraste:false,
+  estrobo:false, piso:false, capaNiebla:false, capaGrade:false, capaBloom:false,
+};
 let randomInc = Object.assign({}, DEFAULT_RANDOM, cfg.random || {});
 
 const SIZE_BASE = 8;        // scale ranges over [1/8 .. 8] at full sizeVar
@@ -812,13 +819,34 @@ const RANDOMIZERS = {
   estroboVel:        () => { strobeHz = rf(2, 14); },
   estroboIntensidad: () => { strobePeak = rf(1.5, 8); },
   luzBase:           () => { baseLight = Math.random() * 0.5; },
+  // --- cámara (posición / zoom) ---
+  camVelocidad:      () => { camSpeed = Math.random(); },
+  camAngulo:         () => { cam.baseAz = Math.random() * TAU; cam.fly = null; cam.tvEnd = 0; },
+  camAltura:         () => { cam.el = rf(0.06, 1.10); cam.fly = null; cam.tvEnd = 0; },
+  camZoom:           () => { cam.rad = rf(1.6, 8.0); cam.fly = null; cam.tvEnd = 0; },
+  // --- cuerpo + render por capas ---
+  colorPiel:         () => { bodyTone = rf(0.25, 1.0); },
+  nieblaDens:        () => { nieblaDens = Math.random(); },
+  brumaBrillo:       () => { hazeBri = Math.random(); },
+  bloomFuerza:       () => { bloomFuerza = Math.random(); },
+  gradeInt:          () => { gradeInt = rf(0.30, 1.0); },
+  blurGen:           () => { blurGen = Math.random() < 0.75 ? 0 : rf(0.05, 0.20); },
+  ditherModo:        () => { ditherModo = ri(['off','off','fino','organico','bayer']); },
+  ditherEscala:      () => { ditherEscala = Math.random(); },
+  ditherContraste:   () => { ditherContraste = Math.random(); },
+  // --- toggles visuales ---
+  estrobo:           () => { setStrobe(Math.random() < 0.5); },
+  piso:              () => { const on = Math.random() < 0.15; grid.visible = floor.visible = on; },
+  capaNiebla:        () => { lNiebla = Math.random() < 0.55; },
+  capaGrade:         () => { lGrade  = Math.random() < 0.60; },
+  capaBloom:         () => { lBloom  = Math.random() < 0.40; },
 };
 
 // RANDOM: solo toca los parámetros marcados en randomInc (config: "random")
 function randomizeAll(){
   for (const k in RANDOMIZERS) if (randomInc[k]) RANDOMIZERS[k]();
   discoLights.forEach(l => l.color.set(l.userData.tint === 'pick' ? strobeColor : ACCENT));
-  applyBodyLook(); refreshStatic(); updatePost();
+  applyBodyLook(); refreshStatic(); updatePost(); applyBlur();
   placeCrowd(COUNT);                                   // reconstruye + aplica formación + reparte bailes
   syncUI();
 }

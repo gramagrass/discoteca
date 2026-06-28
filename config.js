@@ -8,7 +8,7 @@ window.CONFIG = {
   cuerpos:            13,    // nº de cuerpos (1–30)
   familia:            "dance",    // pool de movimientos: todas | solo bailes | solo emociones
   coreografia:        100,    // 0 = todos el mismo baile · 100 = cada quien el suyo
-  cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
+  cambioBaile:        0,    // frecuencia de cambio por modelo (0 = nunca)
   movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
   noise:              30,    // ruido de película (0 = off)
   autoRandomSeg:      25,    // intervalo del auto-random en segundos
@@ -28,12 +28,12 @@ window.CONFIG = {
 
   // luz / estrobo
   luzGeneral:         -100,    // -100..100 (bajo cero: cuerpos oscuros translúcidos)
-  colorPiel:          79,    // tono de cuerpo (0 = negro · 100 = porcelana blanca)
-  colorLuz:           "#c2c2c2",    // color del estrobo / luz
+  colorPiel:          100,    // tono de cuerpo (0 = negro · 100 = porcelana blanca)
+  colorLuz:           "#ffffff",    // color del estrobo / luz
   bpm:                112,    // pulso de luces/audio
   estroboVel:         7.5,    // destellos por segundo
-  estroboIntensidad:  1.6,    // fuerza del destello (0 = negro)
-  luzBase:            33,    // luz entre destellos (0 = negro)
+  estroboIntensidad:  2,    // fuerza del destello (0 = negro)
+  luzBase:            77,    // luz entre destellos (0 = negro)
 
   // render · valores de capas
   nieblaDens:         50,    // densidad de niebla
@@ -46,23 +46,23 @@ window.CONFIG = {
   ditherContraste:    60,    // contraste del dither orgánico
 
   // modo
-  estrobo:            false,    // arrancar en modo estrobo
-  sonido:             false,    // arrancar con sonido (suena al primer clic)
+  estrobo:            true,    // arrancar en modo estrobo
+  sonido:             true,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
-  autoRandom:         true,    // re-roll automático cada cierto tiempo
+  autoRandom:         false,    // re-roll automático cada cierto tiempo
   panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto)
   sacudir:            true,    // sacudir el teléfono dispara un RANDOM
   capaNiebla:         true,    // niebla atmosférica (INSIDE)
   capaGrade:          true,    // grade frío/apagado (INSIDE)
-  capaBloom:          false,    // bloom
+  capaBloom:          true,    // bloom
   fps:                false,    // mostrar FPS
 
   // qué parámetros entran al botón RANDOM
   random: {
     cuerpos:          true,
     familia:          false,
-    coreografia:      true,
-    cambioBaile:      true,
+    coreografia:      false,
+    cambioBaile:      false,
     movimiento:       false,
     noise:            false,
     formacion:        true,
@@ -70,11 +70,29 @@ window.CONFIG = {
     cercania:         false,
     tamanoAzar:       true,
     vistaCamara:      true,
+    camVelocidad:     false,
+    camAngulo:        false,
+    camAltura:        false,
+    camZoom:          false,
     luzGeneral:       true,
+    colorPiel:        false,
     colorLuz:         false,
     bpm:              false,
     estroboVel:       false,
     estroboIntensidad:false,
-    luzBase:          true
+    luzBase:          false,
+    nieblaDens:       false,
+    brumaBrillo:      false,
+    bloomFuerza:      false,
+    gradeInt:         false,
+    blurGen:          false,
+    ditherModo:       false,
+    ditherEscala:     false,
+    ditherContraste:  false,
+    estrobo:          false,
+    piso:             false,
+    capaNiebla:       false,
+    capaGrade:        false,
+    capaBloom:        false
   }
 };

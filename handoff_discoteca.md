@@ -62,7 +62,9 @@ Dos grupos semánticos:
   paraguas: **`BAILES`** (todos los `baile_*`) y **`EMOCIONES`** (todos los `emo_*`), más `todas`.
 - **`motions.js` es la fuente de verdad** — solo se carga lo listado ahí. Estado actual: el disco
   está limpio, los 574 GLB en disco coinciden exactamente con el manifiesto (0 huérfanos).
-- `config.js → familia` admite: `todas | BAILES | EMOCIONES | <familia baile_*/emo_*>`. (Default actual: `BAILES`.)
+- `config.js → familia` admite: `todas | BAILES | EMOCIONES | <familia baile_*/emo_*>`. **Ojo:** un valor
+  legado como `"dance"` (de la v1) ya no existe como familia; `activePool()` cae de forma segura a TODOS
+  los clips, pero no coincide con el dropdown. Recomendado: `BAILES` o `todas`.
 
 ## 5. v1 — qué contiene `backup-v1/`
 - **Cuerpos:** su `models.js` carga 2 (`Masculine`, `Feminine`, RPM TPose). En su `assets/bodies/`
@@ -121,7 +123,8 @@ Se ordenó el repo dejando solo las dos versiones vivas:
   los snapshots pre-v1 `disco-grama-co.zip`, `discoteca_grama.zip`, `zibZqQgY` (zip),
   `discoteca_procedural_backup.html`, la carpeta `build/`, y la carpeta huérfana `assets/dances/`
   (su contenido vive en `backup-v1/`).
-- **Corregido:** `config.js → familia` pasó de `"dance"` (valor v1, ya inexistente) a `"BAILES"`.
+- **Config:** `config.js → familia` quedó en `"dance"` (valor legado de la v1). No rompe — cae a TODOS
+  los clips — pero conviene ponerlo en `BAILES`/`todas` desde `config.html`.
 - **Verificado:** ambas versiones resuelven al 100% (v2: 14 cuerpos + 574 clips; v1: 2 cuerpos +
   112 clips; 0 archivos faltantes; `node --check` OK en todos los manifiestos).
 - Nota git: los cambios están en el árbol de trabajo (41 borrados + `config.js`) pero **sin commitear/pushear**.

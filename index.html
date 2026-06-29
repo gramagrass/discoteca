@@ -175,7 +175,7 @@
     </div>
     <div class="ctl">
       <label>cercanía <span class="val" id="v-close">40</span></label>
-      <input id="s-close" type="range" min="0" max="1" step="0.01" value="0.40">
+      <input id="s-close" type="range" min="0" max="0.4" step="0.01" value="0.40">
     </div>
     <div class="ctl">
       <label>tamaño azar <span class="val" id="v-size">0</span></label>
@@ -338,7 +338,7 @@ let masterBright = cfg.luzGeneral / 100;        // general dimmer (1 = full, →
 let bodyTone     = (cfg.colorPiel ?? 79) / 100; // tono de cuerpo: 0 = negro · 1 = porcelana blanca
 let strobeColor  = clampColor(parseInt(String(cfg.colorLuz).slice(1), 16));  // tint (dark / desaturated)
 let rotRand      = cfg.rotacionAzar / 100;      // 0 = all same way, 1 = fully random
-let closeness    = cfg.cercania / 100;          // 0 = packed blob, 1 = scattered
+let closeness    = Math.min(0.4, cfg.cercania / 100);   // 0 = packed blob, 0.4 = max dispersión (tope: si no, no se ven)
 let sizeVar      = cfg.tamanoAzar / 100;        // 0 = all equal, 1 = hand-size → giant
 let strobeHz     = cfg.estroboVel;              // strobe flashes per second
 let baseLight    = cfg.luzBase / 100;           // resting light between flashes (0 = black)
@@ -813,7 +813,7 @@ const RANDOMIZERS = {
   noise:             () => { noise = Math.random() * 0.5; },
   formacion:         () => { formation = ri(FORMATIONS); },
   rotacionAzar:      () => { rotRand = Math.random(); },
-  cercania:          () => { closeness = Math.random(); },
+  cercania:          () => { closeness = Math.random() * 0.4; },   // tope 40: más lejos no se ven los cuerpos
   tamanoAzar:        () => { sizeVar = Math.random() * 0.5; },
   vistaCamara:       () => { camMode = ri(CAMMODES); cam.fly = null; cam.tvEnd = 0; },
   luzGeneral:        () => { masterBright = (Math.random() < 0.5 ? 1 : -1) * rf(0.5, 1.0); },

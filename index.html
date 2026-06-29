@@ -281,7 +281,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
     <div class="foot">
       <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> movimientos · mocap real</span>
       <span><kbd>R</kbd> tirar dados · <kbd>espacio</kbd> nuevo reparto · <kbd>M</kbd> familia al azar · <kbd>B</kbd> coreografía 0/100 · <kbd>E</kbd> estrobo · <kbd>S</kbd> sonido</span>
-      <span><kbd>C</kbd> cámara · <kbd>F</kbd> formación · <kbd>T</kbd> tamaño · <kbd>H</kbd> panel · <kbd>P</kbd> pantalla completa · <kbd>G</kbd> grabar video</span>
+      <span><kbd>C</kbd> cámara · <kbd>F</kbd> formación · <kbd>T</kbd> tamaño · <kbd>H</kbd> panel · <kbd>P</kbd> pantalla completa</span>
     </div>
   </div>
 </div>
@@ -1189,42 +1189,6 @@ $('panelBtn').onclick = () => ui.classList.toggle('hidden');
 if (isMobile){
   $('panelBtn').style.display = 'none';
 }
-// ---------------------------------------------------------------- grabador de video (100% local, en el navegador)
-// Graba el lienzo a .webm con MediaRecorder. NADA se sube al server: el archivo se genera en tu
-// máquina y se descarga. Funciona desde disco.grama.co o desde una copia local. Mejor en Chrome.
-let mediaRec = null, recChunks = [], recording = false;
-const recDot = document.createElement('div');
-recDot.textContent = '● REC';
-recDot.style.cssText = 'position:fixed;top:12px;left:12px;z-index:60;font:600 12px/1 ui-monospace,monospace;color:#ff3b3b;letter-spacing:.12em;padding:5px 8px;border:1px solid #ff3b3b66;border-radius:4px;background:rgba(0,0,0,.5);display:none;';
-document.body.appendChild(recDot);                                  // overlay DOM: NO se graba (la captura es solo del canvas)
-function pickRecMime(){
-  const t = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
-  return (window.MediaRecorder ? t.find(m => MediaRecorder.isTypeSupported(m)) : '') || '';
-}
-function startRec(){
-  if (recording || !renderer.domElement.captureStream || !window.MediaRecorder){
-    if (!window.MediaRecorder) console.warn('Este navegador no soporta MediaRecorder (probá Chrome).');
-    return;
-  }
-  const stream = renderer.domElement.captureStream(60);
-  try { mediaRec = new MediaRecorder(stream, { mimeType: pickRecMime(), videoBitsPerSecond: 16000000 }); }
-  catch(e){ mediaRec = new MediaRecorder(stream); }
-  recChunks = [];
-  mediaRec.ondataavailable = e => { if (e.data && e.data.size) recChunks.push(e.data); };
-  mediaRec.onstop = () => {
-    const blob = new Blob(recChunks, { type: (mediaRec.mimeType || 'video/webm') });
-    const ts = new Date().toISOString().replace(/[-:]/g,'').replace(/\..+/,'').replace('T','_');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = 'discoteca_' + ts + '.webm';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  };
-  mediaRec.start();
-  recording = true; recDot.style.display = 'block';
-}
-function stopRec(){ if (!recording) return; recording = false; recDot.style.display = 'none'; try { mediaRec.stop(); } catch(e){} }
-function toggleRec(){ recording ? stopRec() : startRec(); }
-
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (k === 'r'){ e.preventDefault(); randomizeAll(); }            // tirar dados
@@ -1236,7 +1200,6 @@ addEventListener('keydown', e => {
   else if (k === 't'){ sizeVar = Math.random() * 0.6; applyLayout(); syncUI(); }   // tamaño azar al azar
   else if (k === 'm'){ activeFamily = ri(['todas','BAILES','EMOCIONES', ...Object.keys(MOTIONS)]); assignDances(); syncUI(); }  // familia de movimiento al azar
   else if (k === 'b'){ choreo = choreo < 0.5 ? 1 : 0; assignDances(); syncUI(); }  // coreografía: 0 (unísono) ↔ 100 (cada quien)
-  else if (k === 'g'){ toggleRec(); }                              // grabar video (start/stop)
   else if (k === 'h') ui.classList.toggle('hidden');               // ocultar panel
   else if (k === 'p'){                                             // pantalla completa
     if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();

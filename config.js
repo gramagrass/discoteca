@@ -7,15 +7,15 @@ window.CONFIG = {
   // cuerpos
   cuerpos:            13,    // nº de cuerpos (1–30)
   familia:            "dance",    // pool de movimientos: todas | solo bailes | solo emociones
-  coreografia:        100,    // 0 = todos el mismo baile · 100 = cada quien el suyo
-  cambioBaile:        0,    // frecuencia de cambio por modelo (0 = nunca)
+  coreografia:        0,    // 0 = todos el mismo baile · 100 = cada quien el suyo
+  cambioBaile:        20,    // frecuencia de cambio por modelo (0 = nunca)
   movimiento:         25,    // velocidad del baile (50 = normal, 0 = quietos, 100 = 2×)
   noise:              30,    // ruido de película (0 = off)
   autoRandomSeg:      25,    // intervalo del auto-random en segundos
 
   // espacio
   formacion:          "aleatorio",    // aleatorio | cuadricula | anillo | anillo_fuera | circulo | fila | espiral
-  rotacionAzar:       100,    // 0 = miran igual · 100 = al azar
+  rotacionAzar:       25,    // 0 = miran igual · 100 = al azar
   cercania:           10,    // 0 = masa apretada · 100 = dispersos
   tamanoAzar:         0,    // 0 = igual tamaño · 100 = de mano a gigante
 
@@ -33,12 +33,12 @@ window.CONFIG = {
   bpm:                112,    // pulso de luces/audio
   estroboVel:         7.5,    // destellos por segundo
   estroboIntensidad:  2,    // fuerza del destello (0 = negro)
-  luzBase:            77,    // luz entre destellos (0 = negro)
+  luzBase:            80,    // luz entre destellos (0 = negro)
 
   // render · valores de capas
   nieblaDens:         50,    // densidad de niebla
   brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
-  bloomFuerza:        50,    // fuerza del bloom
+  bloomFuerza:        15,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
   blurGen:            0,    // desenfoque general del render (0 = nítido)
   ditherModo:         "off",    // off | fino (anti-banding) | organico (blue-noise b/n) | bayer (ordenado 1px)
@@ -60,14 +60,14 @@ window.CONFIG = {
   // qué parámetros entran al botón RANDOM
   random: {
     cuerpos:          true,
-    familia:          false,
+    familia:          true,
     coreografia:      false,
     cambioBaile:      false,
     movimiento:       false,
     noise:            false,
     formacion:        true,
-    rotacionAzar:     true,
-    cercania:         false,
+    rotacionAzar:     false,
+    cercania:         true,
     tamanoAzar:       true,
     vistaCamara:      true,
     camVelocidad:     false,

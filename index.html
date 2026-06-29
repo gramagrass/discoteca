@@ -93,7 +93,10 @@
     font-family:inherit; color:var(--ink); border:1px solid var(--line);
     padding:0 4px; border-radius:3px; font-size:9.5px;
   }
+  /* al ocultar el panel, sus hijos (#dock tiene pointer-events:auto) NO deben capturar toques:
+     si no, en móvil la franja derecha del panel se come el dedo y no llega al canvas (rotar / doble-tap) */
   .hidden{ opacity:0 !important; pointer-events:none !important; }
+  .hidden *{ pointer-events:none !important; }
   #ui *{ transition:opacity .3s ease; }
   #loader{
     position:fixed; inset:0; display:flex; align-items:center; justify-content:center;

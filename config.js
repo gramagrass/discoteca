@@ -38,7 +38,7 @@ window.CONFIG = {
   // render · valores de capas
   nieblaDens:         50,    // densidad de niebla
   brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
-  bloomFuerza:        20,    // fuerza del bloom
+  bloomFuerza:        15,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
   blurGen:            0,    // desenfoque general del render (0 = nítido)
   ditherModo:         "off",    // off | fino (anti-banding) | organico (blue-noise b/n) | bayer (ordenado 1px)

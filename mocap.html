@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>cuerpos · mocap studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#cfd0d6; --ink-dim:#6a6b78; --line:rgba(255,255,255,0.10); --accent:#ff2d7a; --ok:#39d98a; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#050507; color:var(--ink); min-height:100vh;
+    font-family:"JetBrains Mono", ui-monospace, monospace; padding:34px 18px 80px; }
+  .wrap{ width:100%; max-width:980px; margin:0 auto; }
+  h1{ font-size:15px; letter-spacing:0.3em; text-transform:uppercase; font-weight:500; margin:0 0 4px; }
+  .sub{ font-size:11px; color:var(--ink-dim); letter-spacing:0.04em; margin-bottom:6px; }
+  .sec{ font-size:9.5px; letter-spacing:0.22em; text-transform:uppercase; color:var(--accent);
+    margin:26px 0 12px; padding-top:13px; border-top:1px solid var(--line); }
+  .grid{ display:grid; grid-template-columns:1fr; gap:26px; }
+  @media(min-width:860px){ .grid{ grid-template-columns:1fr 1fr; align-items:start; } }
+  .row{ display:grid; grid-template-columns:120px 1fr; align-items:center; gap:12px; margin:10px 0; }
+  .row label{ font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-dim); }
+  input[type=text], input[type=number], select{ width:100%; background:#0c0c12; border:1px solid var(--line);
+    color:var(--ink); font-family:inherit; font-size:12px; padding:6px 8px; border-radius:3px; }
+  input:focus, select:focus{ outline:none; border-color:var(--ink); }
+  .chkrow{ display:flex; align-items:center; gap:8px; font-size:10px; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--ink); margin:10px 0; }
+  .chkrow input{ accent-color:var(--accent); width:14px; height:14px; }
+  pre.cmd{ background:#0a0a10; border:1px solid var(--line); border-radius:4px; padding:11px 12px;
+    font-size:11px; line-height:1.5; color:#b9c7d6; white-space:pre-wrap; word-break:break-word; position:relative; }
+  .step{ font-size:9px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-dim); margin:16px 0 5px; }
+  .step b{ color:var(--accent); }
+  button{ font-family:inherit; font-size:10px; letter-spacing:0.12em; text-transform:uppercase;
+    background:transparent; color:var(--ink); border:1px solid var(--line); padding:6px 11px;
+    border-radius:3px; cursor:pointer; }
+  button:hover{ border-color:var(--ink); }
+  button.copy{ position:absolute; top:7px; right:7px; padding:3px 8px; font-size:8.5px; }
+  .hint{ font-size:10px; color:var(--ink-dim); line-height:1.6; margin:8px 0; }
+  .hint a{ color:var(--accent); text-decoration:none; }
+  #stage{ width:100%; aspect-ratio:1/1; background:#08080d; border:1px solid var(--line); border-radius:5px; }
+  .pvrow{ display:flex; gap:8px; align-items:center; margin:10px 0; flex-wrap:wrap; }
+  .pvrow select{ flex:1; min-width:120px; }
+  .badge{ font-size:9px; letter-spacing:0.1em; text-transform:uppercase; padding:2px 7px; border-radius:10px;
+    border:1px solid var(--line); color:var(--ink-dim); }
+  .badge.ok{ color:var(--ok); border-color:rgba(57,217,138,0.4); }
+  .badge.warn{ color:var(--accent); border-color:rgba(255,45,122,0.4); }
+  input[type=range]{ -webkit-appearance:none; appearance:none; height:2px; background:var(--line); outline:none; cursor:pointer; flex:1; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--ink); }
+  .foot{ font-size:10px; color:var(--ink-dim); margin-top:24px; line-height:1.6; }
+  .foot a{ color:var(--accent); text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MOCAP STUDIO</h1>
+  <div class="sub">video de una persona → clips de movimiento para la obra · pipeline GVHMR → SMPL-X → glb</div>
+
+  <div class="grid">
+    <!-- ───────────── columna izquierda: generar comandos ───────────── -->
+    <div>
+      <div class="sec">nueva captura</div>
+      <div class="row"><label>nombre captura</label><input type="text" id="capName" value="mocap_rehab" placeholder="mocap_rehab"></div>
+      <div class="row"><label>video (archivo)</label><input type="text" id="vidFile" value="IMG_1234.mov" placeholder="IMG_1234.mov"></div>
+      <div class="row"><label>seg. (seg)</label><input type="number" id="segSec" value="0" min="0" step="1"></div>
+      <div class="row"><label>fps</label><input type="number" id="fps" value="30" min="10" step="1"></div>
+      <label class="chkrow"><input type="checkbox" id="staticCam" checked> cámara fija (pared blanca) — recomendado</label>
+
+      <div class="step"><b>1.</b> Stage A · GPU (Colab o máquina CUDA) — extrae el movimiento</div>
+      <pre class="cmd" id="cmdA"></pre>
+      <div class="hint">Sin GPU en tu Mac: abrí <b>colab_gvhmr.ipynb</b> (en _local/video2motion). Te devuelve
+        <span id="capPath">captures/mocap_rehab/</span>*.npz para traer a tu Mac.</div>
+
+      <div class="step"><b>2.</b> Stage B · local (tu Mac) — npz → glb + registro</div>
+      <pre class="cmd" id="cmdB"></pre>
+      <div class="hint">Esto exporta a <code>assets/motions/&lt;captura&gt;/</code> con Blender + el add-on
+        SMPL-X, y agrega la familia a <code>motions.js</code> (con backup). Después, en la obra,
+        tecla <b>M</b> cicla familias hasta tu captura.</div>
+    </div>
+
+    <!-- ───────────── columna derecha: previsualizar / QC ───────────── -->
+    <div>
+      <div class="sec">previsualizar · QC <span id="prevBadge" class="badge">esperando</span></div>
+      <canvas id="stage"></canvas>
+      <div class="pvrow">
+        <select id="famSel"><option>— familia —</option></select>
+        <select id="clipSel"><option>— clip —</option></select>
+      </div>
+      <div class="pvrow">
+        <select id="bodySel"><option>— cuerpo —</option></select>
+        <button id="playBtn">▶ play</button>
+      </div>
+      <div class="pvrow"><label class="badge">velocidad</label><input type="range" id="speed" min="0.1" max="2" step="0.05" value="1"><span id="spd" class="badge">1.0×</span></div>
+      <div class="pvrow">
+        <label class="badge" for="localGlb">probar .glb local</label>
+        <input type="file" id="localGlb" accept=".glb" style="font-size:10px;color:var(--ink-dim);">
+      </div>
+      <div class="hint">Cargá un cuerpo + un clip y mirá que baile <b>parado y derecho</b> (no acostado ni
+        girado). Si está acostado, agregá <code>--root-rot " -90,0,0"</code> al Stage A y re-exportá.</div>
+    </div>
+  </div>
+
+  <div class="foot">
+    Studio local de QC — no despliega nada. La obra vive en <a href="./index.html">index.html</a> ·
+    config en <a href="./config.html">config.html</a> · guía completa en
+    <code>_local/video2motion/README.md</code>.
+  </div>
+</div>
+
+<script src="models.js"></script>
+<script src="motions.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ─────────────────────────── generador de comandos ───────────────────────────
+const $ = id => document.getElementById(id);
+function stem(f){ return f.replace(/\.[^.]+$/, ''); }
+function refreshCmds(){
+  const name = $('capName').value.trim() || 'captura';
+  const vid  = $('vidFile').value.trim() || 'video.mov';
+  const st   = stem(vid);
+  const seg  = $('segSec').value || '0';
+  const fps  = $('fps').value || '30';
+  const sc   = $('staticCam').checked ? ' --static_cam' : '';
+  $('capPath').textContent = `captures/${name}/`;
+  $('cmdA').textContent =
+`# en GVHMR (GPU). cámara fija = sin SLAM:
+python tools/demo/demo.py --video "inputs/${vid}"${sc}
+
+# convertir la salida a npz AMASS (formato DanceDB):
+python gvhmr_to_amass.py \\
+  --pt outputs/demo/${st}/hmr4d_results.pt \\
+  --name ${name} --video-stem ${st} \\
+  --out captures --fps ${fps} --seg-seconds ${seg}`;
+  $('cmdB').textContent =
+`cd _local/video2motion
+./run.sh ${name} --fps ${fps}        # usa captures/${name}/*.npz`;
+}
+['capName','vidFile','segSec','fps','staticCam'].forEach(id => $(id).addEventListener('input', refreshCmds));
+refreshCmds();
+
+// botones copiar
+document.querySelectorAll('pre.cmd').forEach(pre => {
+  const b = document.createElement('button'); b.className='copy'; b.textContent='copiar';
+  b.onclick = () => { navigator.clipboard.writeText(pre.textContent); b.textContent='✓'; setTimeout(()=>b.textContent='copiar',900); };
+  pre.appendChild(b);
+});
+
+// ─────────────────────────── visor de QC (three.js) ───────────────────────────
+const canvas = $('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x08080d);
+const cam = new THREE.PerspectiveCamera(38, 1, 0.05, 100); cam.position.set(0, 1.1, 3.2);
+const controls = new OrbitControls(cam, canvas); controls.target.set(0, 0.95, 0); controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x202028, 1.1));
+const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(2,4,3); scene.add(key);
+const grid = new THREE.GridHelper(6, 12, 0x222230, 0x141420); scene.add(grid);
+const clayMat = new THREE.MeshStandardMaterial({ color:0xc9c9cd, roughness:0.78, metalness:0.0 });
+
+function resize(){ const s = canvas.clientWidth; renderer.setSize(s, s, false); cam.aspect = 1; cam.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(canvas); resize();
+
+const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+const loadGlb = url => new Promise((res, rej) => loader.load(url, res, undefined, rej));
+
+let mixer = null, current = null, clock = new THREE.Clock(), playing = true, speed = 1;
+function neutralizeRoot(clip){ clip.tracks = clip.tracks.filter(t => !t.name.endsWith('.position')); }
+function setBadge(txt, cls){ const b = $('prevBadge'); b.textContent = txt; b.className = 'badge' + (cls?(' '+cls):''); }
+
+function clearCurrent(){ if (current){ scene.remove(current); current = null; } if (mixer){ mixer.stopAllAction(); mixer = null; } }
+
+async function preview(bodyUrl, clipGltfOrUrl){
+  setBadge('cargando…');
+  try{
+    clearCurrent();
+    const bodyG = await loadGlb(bodyUrl);
+    const body = cloneSkinned(bodyG.scene);
+    body.traverse(o => {
+      if (o.name && /^mixamorig:?/i.test(o.name)) o.name = o.name.replace(/^mixamorig:?/i,'');
+      if (o.isMesh){ o.material = clayMat; o.frustumCulled = false; }
+    });
+    // normalizar altura/posición como en la obra
+    body.updateMatrixWorld(true);
+    let bb = new THREE.Box3().setFromObject(body); const h = bb.max.y - bb.min.y;
+    if (h>0.001){ body.scale.multiplyScalar(1.7/h); body.updateMatrixWorld(true); bb = new THREE.Box3().setFromObject(body); }
+    body.position.x -= (bb.min.x+bb.max.x)/2; body.position.z -= (bb.min.z+bb.max.z)/2; body.position.y -= bb.min.y;
+    scene.add(body); current = body;
+
+    const clipG = (typeof clipGltfOrUrl === 'string') ? await loadGlb(clipGltfOrUrl) : clipGltfOrUrl;
+    const clip = clipG.animations[0];
+    if (!clip){ setBadge('clip sin animación', 'warn'); return; }
+    neutralizeRoot(clip);
+    mixer = new THREE.AnimationMixer(body);
+    const action = mixer.clipAction(clip); action.play();
+    setBadge('▶ ' + (clip.name || 'clip'), 'ok');
+  }catch(e){ console.warn(e); setBadge('error al cargar', 'warn'); }
+}
+
+// poblar dropdowns
+const MOTIONS = window.MOTIONS || {};
+const MODELS  = window.MODELS  || [];
+const famSel = $('famSel'), clipSel = $('clipSel'), bodySel = $('bodySel');
+Object.keys(MOTIONS).sort().forEach(f => { const o = document.createElement('option'); o.value=f; o.textContent=f; famSel.appendChild(o); });
+MODELS.forEach(m => { const o = document.createElement('option'); o.value=m; o.textContent=m; bodySel.appendChild(o); });
+if (MODELS.length){ bodySel.value = MODELS.find(m=>m==='m_avg') || MODELS[0]; }
+
+famSel.addEventListener('change', () => {
+  clipSel.innerHTML = '';
+  (MOTIONS[famSel.value] || []).forEach(c => { const o = document.createElement('option'); o.value=c; o.textContent=c; clipSel.appendChild(o); });
+  tryPreview();
+});
+clipSel.addEventListener('change', tryPreview);
+bodySel.addEventListener('change', tryPreview);
+
+function bodyUrl(){ return `./assets/bodies/${bodySel.value}.glb`; }
+function tryPreview(){
+  if (!famSel.value || !clipSel.value || !bodySel.value) return;
+  preview(bodyUrl(), `./assets/motions/${famSel.value}/${clipSel.value}.glb`);
+}
+
+// .glb local
+$('localGlb').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const url = URL.createObjectURL(f);
+  loadGlb(url).then(g => preview(bodyUrl(), g)).catch(()=>setBadge('glb local inválido','warn'));
+});
+
+// controles
+$('playBtn').addEventListener('click', () => { playing = !playing; $('playBtn').textContent = playing ? '❚❚ pausa' : '▶ play'; });
+$('speed').addEventListener('input', e => { speed = parseFloat(e.target.value); $('spd').textContent = speed.toFixed(2) + '×'; });
+
+(function loop(){
+  requestAnimationFrame(loop);
+  const dt = clock.getDelta();
+  if (mixer && playing) mixer.update(dt * speed);
+  controls.update();
+  renderer.render(scene, cam);
+})();
+
+// auto-seleccionar la primera familia para mostrar algo
+if (famSel.options.length > 1){ famSel.selectedIndex = 1; famSel.dispatchEvent(new Event('change')); }
+</script>
+</body>
+</html>

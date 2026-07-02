@@ -98,12 +98,6 @@
   .hidden{ opacity:0 !important; pointer-events:none !important; }
   .hidden *{ pointer-events:none !important; }
   #ui *{ transition:opacity .3s ease; }
-  #loader{
-    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
-    background:#050507; color:var(--ink-dim); z-index:10;
-    font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px; letter-spacing:0.1em;
-    transition:opacity .5s ease;
-  }
   #fps{
     position:fixed; top:14px; left:16px; z-index:9; display:none;
     font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px;
@@ -133,22 +127,31 @@
   #introCard::-webkit-scrollbar{ width:6px; }
   #introCard::-webkit-scrollbar-thumb{ background:var(--line); border-radius:3px; }
   .introCtrl{ font-size:11.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-dim); }
-  #introBtn{ margin:10px 0 20px; padding:10px 28px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase; }
+  #introBtn{
+    margin:10px 0 20px; padding:10px 28px; font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    transition:opacity .4s ease;
+  }
+  #introStatus{ font-size:10.5px; letter-spacing:0.08em; color:var(--ink-dim); margin:6px 0 20px; }
+  #introStatus.introError{ color:var(--accent); }
   #introText{
     font-size:11.5px; line-height:1.7; letter-spacing:0.01em; color:var(--ink-dim);
     text-align:left; border-top:1px solid var(--line); padding-top:16px; margin:0;
   }
+  #introAuthor{
+    font-size:10.5px; letter-spacing:0.04em; color:var(--ink-dim); font-style:italic;
+    text-align:right; width:100%; margin:8px 0 0;
+  }
 </style>
 </head>
 <body>
-<div id="loader">cargando cuerpos y bailes…</div>
-
-<div id="intro" class="hidden">
+<div id="intro">
   <div id="introCard">
     <div class="introCtrl">Mueva su dedo por la pantalla para mover la cámara</div>
     <div class="introCtrl">Haga doble click para una nueva composición</div>
-    <button id="introBtn" class="primary">Entrar</button>
-    <p id="introText">Charco 3 (Discoteca) dibuja un grupo siempre cambiante de modelos 3D encontrados en bases de datos y modelos MoCap (Captura de Movimiento) utilizados en diferentes aplicaciones de software y videojuegos. El cuerpo humano y sus movimientos medidos y calculados matemáticamente se explayan en formaciones y coreografías generativas que muestran esta colección de gestos corporales humanos (que abarcan desde bailes folclóricos hasta emociones sutiles) y que son indexados paulatinamente por los sistemas de aprendizaje de máquinas. Charco 3 (Discoteca) nos presenta una celebración del cuerpo humano y sus gestos que a pesar de todo exceden a estas acciones de vigilancia y control en su increíble variedad y vitalidad.</p>
+    <button id="introBtn" class="primary hidden">Entrar</button>
+    <p id="introStatus">cargando cuerpos y bailes…</p>
+    <p id="introText">Charco 3 (Discoteca) dibuja un grupo siempre cambiante de modelos 3D encontrados en bases de datos y modelos MoCap (Captura de Movimiento) utilizados en diferentes aplicaciones de software y videojuegos. El cuerpo humano y sus movimientos medidos y calculados matemáticamente se explayan en formaciones y coreografías generativas que muestran esta colección de gestos corporales humanos (que abarcan desde bailes folclóricos hasta emociones sutiles) y que son indexados paulatinamente por los sistemas de aprendizaje de máquinas y que ya se prefiguran en una próxima frontera de captación cultural más allá del texto. La traducción imposible de los movimientos microscópicos humanos crean un lugar inquietante donde, a pesar de la torpeza de la visión maquinal, la increíble vitalidad de los gestos sobrevive en esta especie de discoteca rara.</p>
+    <p id="introAuthor">— Carmenza Rayo-Schnell</p>
   </div>
 </div>
 
@@ -1330,12 +1333,12 @@ loadAssets().then(() => {
   if (cfg.piso){ grid.visible = true; floor.visible = true; }
   setStrobe(!!cfg.estrobo);    // also sets disco/strobe light levels via refreshStatic
   if (cfg.sonido) $('sound').click();   // begins on first click due to autoplay rules
-  const ld = $('loader'); ld.style.opacity = 0; setTimeout(() => ld.remove(), 600);
-  $('intro').classList.remove('hidden');   // muestra instrucciones + texto de la obra al terminar de cargar
+  $('introStatus').remove();               // listo: quita "cargando…" y revela el botón Entrar
+  $('introBtn').classList.remove('hidden');
   prev = performance.now();
   requestAnimationFrame(tick);
 }).catch(err => {
-  $('loader').textContent = 'error cargando assets — revisa la conexión';
+  const st = $('introStatus'); st.textContent = 'error cargando assets — revisa la conexión'; st.classList.add('introError');
   console.error(err);
 });
 </script>

@@ -58,6 +58,14 @@
   <div class="grid">
     <!-- ───────────── columna izquierda: generar comandos ───────────── -->
     <div>
+      <div class="sec">elegir video <span id="vidBadge" class="badge">…</span></div>
+      <div class="row"><label>carpeta</label><input type="text" id="vidFolder" value="_local/mocaps"></div>
+      <div class="pvrow">
+        <select id="vidSel"><option>— video —</option></select>
+        <button id="vidRefresh">↻</button>
+      </div>
+      <video id="vidPrev" controls preload="metadata" style="width:100%;border:1px solid var(--line);border-radius:4px;margin:6px 0;background:#000;display:none;"></video>
+
       <div class="sec">nueva captura</div>
       <div class="row"><label>nombre captura</label><input type="text" id="capName" value="mocap_rehab" placeholder="mocap_rehab"></div>
       <div class="row"><label>video (archivo)</label><input type="text" id="vidFile" value="IMG_1234.mov" placeholder="IMG_1234.mov"></div>
@@ -75,6 +83,8 @@
       <div class="hint">Esto exporta a <code>assets/motions/&lt;captura&gt;/</code> con Blender + el add-on
         SMPL-X, y agrega la familia a <code>motions.js</code> (con backup). Después, en la obra,
         tecla <b>M</b> cicla familias hasta tu captura.</div>
+
+      <button id="copyAll" style="margin-top:14px;width:100%;padding:9px;">⧉ copiar A + B (todo el flujo del video elegido)</button>
     </div>
 
     <!-- ───────────── columna derecha: previsualizar / QC ───────────── -->
@@ -147,6 +157,61 @@ python gvhmr_to_amass.py \\
 }
 ['capName','vidFile','segSec','fps','staticCam'].forEach(id => $(id).addEventListener('input', refreshCmds));
 refreshCmds();
+
+// ─────────────────────── listar videos de una carpeta del repo ───────────────
+// El http.server de Python genera un índice HTML de la carpeta; lo parseamos.
+const VID_EXT = ['.mov','.mp4','.avi','.webm','.m4v','.mkv'];
+function setVidBadge(t, cls){ const b=$('vidBadge'); b.textContent=t; b.className='badge'+(cls?(' '+cls):''); }
+async function listVideos(){
+  const folder = $('vidFolder').value.trim().replace(/^\/|\/$/g,'');
+  const sel = $('vidSel'); sel.innerHTML='';
+  setVidBadge('leyendo…');
+  try{
+    const res = await fetch('/'+folder+'/', {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+    const vids = [...doc.querySelectorAll('a')]
+      .map(a => decodeURIComponent(a.getAttribute('href')||'').replace(/\/$/,''))
+      .filter(h => h && !h.includes('/') && VID_EXT.some(e => h.toLowerCase().endsWith(e)))
+      .filter((v,i,arr) => arr.indexOf(v)===i).sort();
+    if(!vids.length){ setVidBadge('sin videos', 'warn'); $('vidPrev').style.display='none'; return; }
+    const ph=document.createElement('option'); ph.value=''; ph.textContent='— video —'; sel.appendChild(ph);
+    vids.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+    setVidBadge(vids.length+' video(s)', 'ok');
+    sel.selectedIndex = 1; sel.dispatchEvent(new Event('change'));
+  }catch(e){
+    setVidBadge('abrí con serve.command', 'warn');
+    const o=document.createElement('option'); o.textContent='(serví el repo por HTTP)'; sel.appendChild(o);
+    $('vidPrev').style.display='none';
+  }
+}
+$('vidSel').addEventListener('change', () => {
+  const v = $('vidSel').value; if(!v) return;
+  const folder = $('vidFolder').value.trim().replace(/^\/|\/$/g,'');
+  $('vidFile').value = v;
+  // sugerir nombre de captura desde el archivo si todavía es el default
+  const cap = $('capName'); if(cap.value==='mocap_rehab' || !cap.value) cap.value = 'mocap_' + stem(v).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  const vp = $('vidPrev'); vp.src = '/'+folder+'/'+encodeURIComponent(v); vp.style.display='block';
+  refreshCmds();
+});
+$('vidRefresh').addEventListener('click', listVideos);
+$('vidFolder').addEventListener('change', listVideos);
+listVideos();
+
+// copiar A + B juntos (flujo completo del video elegido)
+$('copyAll').addEventListener('click', () => {
+  const name = $('capName').value.trim() || 'captura';
+  const full =
+`# ════════ STAGE A · GPU (Colab o máquina CUDA) ════════
+${$('cmdA').textContent.replace(/copiar|✓/g,'').trim()}
+
+# ════════ STAGE B · tu Mac ════════
+${$('cmdB').textContent.replace(/copiar|✓/g,'').trim()}`;
+  navigator.clipboard.writeText(full);
+  const b = $('copyAll'); const t = b.textContent;
+  b.textContent = '✓ copiado (A en GPU, B en tu Mac)';
+  setTimeout(() => b.textContent = t, 1400);
+});
 
 // botones copiar
 document.querySelectorAll('pre.cmd').forEach(pre => {

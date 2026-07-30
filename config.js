@@ -40,7 +40,7 @@ window.CONFIG = {
   brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
   bloomFuerza:        15,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
-  blurGen:            17,    // desenfoque general del render (0 = nítido)
+  blurGen:            0,    // desenfoque general del render (0 = nítido)
   ditherModo:         "off",    // off | fino (anti-banding) | organico (blue-noise b/n) | bayer (ordenado 1px)
   ditherEscala:       30,    // tamaño de punto del dither (0 = 1px denso · 100 = 3px)
   ditherContraste:    60,    // contraste del dither orgánico

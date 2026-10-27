@@ -145,6 +145,18 @@
     font-size:10.5px; letter-spacing:0.04em; color:var(--ink-dim); font-style:italic;
     text-align:right; width:100%; margin:8px 0 0;
   }
+  /* QR (tecla Q): centrado sobre la obra con fondo desenfocado */
+  #qr{
+    position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
+    background:rgba(5,5,7,0.35); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    transition:opacity .35s ease; cursor:pointer;
+  }
+  #qrCard{
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    padding:clamp(18px,3vmin,32px); background:#fff; border-radius:10px;
+    font-family:"JetBrains Mono", ui-monospace, monospace; font-size:clamp(12px,1.8vmin,18px); color:#050507;
+  }
+  #qrCard svg{ width:min(46vmin,420px); height:auto; display:block; shape-rendering:crispEdges; }
 </style>
 </head>
 <body>
@@ -157,6 +169,14 @@
     <p id="introStatus">cargando cuerpos y bailes…</p>
     <p id="introText">Charco 3 (Discoteca) dibuja un grupo siempre cambiante de modelos 3D encontrados en bases de datos y modelos MoCap (Captura de Movimiento) utilizados en diferentes aplicaciones de software y videojuegos. El cuerpo humano y sus movimientos medidos y calculados matemáticamente se explayan en formaciones y coreografías generativas que muestran esta colección de gestos corporales humanos (que abarcan desde bailes folclóricos hasta emociones sutiles) y que son indexados paulatinamente por los sistemas de aprendizaje de máquinas y que ya se prefiguran en una próxima frontera de captación cultural más allá del texto. La traducción imposible de los movimientos microscópicos humanos crean un lugar inquietante donde, a pesar de la torpeza de la visión maquinal, la increíble vitalidad de los gestos sobrevive en esta especie de discoteca rara.</p>
     <p id="introAuthor">— Carmenza Rayo-Schnell</p>
+  </div>
+</div>
+
+<div id="qr" class="hidden" title="cerrar (Q)">
+  <div id="qrCard">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 25"><path stroke="#000" d="M0 0.5h7m3 0h1m3 0h1m3 0h7m-25 1h1m5 0h1m1 0h3m3 0h1m1 0h1m1 0h1m5 0h1m-25 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h1m1 0h2m2 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m1 0h1m1 0h1m1 0h2m2 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m1 0h3m1 0h1m2 0h4m3 0h1m1 0h1m1 0h3m1 0h1m-25 1h1m5 0h1m4 0h1m6 0h1m5 0h1m-25 1h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7m-17 1h4m2 0h2m-16 1h1m5 0h1m1 0h1m1 0h4m1 0h4m2 0h3m-23 1h1m1 0h3m4 0h1m1 0h4m3 0h5m-24 1h1m1 0h1m1 0h1m1 0h1m1 0h2m1 0h1m1 0h4m4 0h1m1 0h2m-17 1h2m1 0h1m3 0h5m1 0h1m2 0h1m-24 1h4m1 0h1m5 0h1m2 0h2m1 0h2m4 0h1m-25 1h1m4 0h1m1 0h1m7 0h3m1 0h1m3 0h1m-24 1h1m1 0h1m1 0h4m1 0h5m1 0h1m2 0h4m1 0h2m-25 1h1m1 0h2m1 0h1m1 0h1m1 0h1m1 0h1m3 0h1m1 0h1m1 0h1m1 0h2m1 0h1m-25 1h1m1 0h5m1 0h1m1 0h2m1 0h2m1 0h5m1 0h1m-15 1h3m1 0h2m2 0h1m3 0h1m-21 1h7m4 0h1m4 0h1m1 0h1m1 0h1m3 0h1m-25 1h1m5 0h1m5 0h1m1 0h1m1 0h1m3 0h1m-21 1h1m1 0h3m1 0h1m2 0h1m2 0h1m2 0h6m1 0h3m-25 1h1m1 0h3m1 0h1m2 0h2m3 0h2m1 0h2m4 0h2m-25 1h1m1 0h3m1 0h1m4 0h2m3 0h1m4 0h2m1 0h1m-25 1h1m5 0h1m2 0h1m1 0h1m4 0h1m1 0h3m3 0h1m-25 1h7m1 0h1m3 0h3m1 0h1m4 0h1m2 0h1"/></svg>
+
+    <div>disco.grama.co</div>
   </div>
 </div>
 
@@ -324,6 +344,7 @@ ANG <b id="r-az">0</b>° &nbsp; ALT <b id="r-el">0</b>° &nbsp; ZOOM <b id="r-zo
       <span><b id="m-count">16</b> cuerpos · <b id="m-dances">0</b> movimientos · mocap real</span>
       <span><kbd>R</kbd> tirar dados · <kbd>espacio</kbd> nuevo reparto · <kbd>M</kbd> familia al azar · <kbd>B</kbd> coreografía 0/100 · <kbd>E</kbd> estrobo · <kbd>S</kbd> sonido</span>
       <span><kbd>C</kbd> cámara · <kbd>F</kbd> formación · <kbd>T</kbd> tamaño · <kbd>H</kbd> panel · <kbd>P</kbd> pantalla completa</span>
+      <span><kbd>Q</kbd> código QR</span>
     </div>
   </div>
 </div>
@@ -1239,6 +1260,7 @@ $('panelBtn').onclick = () => ui.classList.toggle('hidden');
 if (isMobile){
   $('panelBtn').style.display = 'none';
 }
+$('qr').onclick = () => $('qr').classList.add('hidden');          // clic sobre el QR lo cierra
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if (k === 'r'){ e.preventDefault(); randomizeAll(); }            // tirar dados
@@ -1251,6 +1273,7 @@ addEventListener('keydown', e => {
   else if (k === 'm'){ activeFamily = ri(['todas','BAILES','EMOCIONES', ...Object.keys(MOTIONS)]); assignDances(); syncUI(); }  // familia de movimiento al azar
   else if (k === 'b'){ choreo = choreo < 0.5 ? 1 : 0; assignDances(); syncUI(); }  // coreografía: 0 (unísono) ↔ 100 (cada quien)
   else if (k === 'h') ui.classList.toggle('hidden');               // ocultar panel
+  else if (k === 'q') $('qr').classList.toggle('hidden');          // mostrar/ocultar QR
   else if (k === 'p'){                                             // pantalla completa
     if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
     else document.exitFullscreen?.();

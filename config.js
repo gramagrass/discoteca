@@ -40,7 +40,7 @@ window.CONFIG = {
   brumaBrillo:        40,    // 0 = bruma oscura (atmósfera en negro) · 100 = clara
   bloomFuerza:        15,    // fuerza del bloom
   gradeInt:           100,    // intensidad del grade frío
-  blurGen:            0,    // desenfoque general del render (0 = nítido)
+  blurGen:            2,    // desenfoque general del render (0 = nítido)
   ditherModo:         "off",    // off | fino (anti-banding) | organico (blue-noise b/n) | bayer (ordenado 1px)
   ditherEscala:       30,    // tamaño de punto del dither (0 = 1px denso · 100 = 3px)
   ditherContraste:    60,    // contraste del dither orgánico
@@ -50,7 +50,7 @@ window.CONFIG = {
   sonido:             true,    // arrancar con sonido (suena al primer clic)
   piso:               false,    // mostrar piso/rejilla
   autoRandom:         false,    // re-roll automático cada cierto tiempo
-  panel:              true,    // mostrar el panel en escritorio (en móvil siempre oculto)
+  panel:              false,    // mostrar el panel en escritorio (en móvil siempre oculto)
   sacudir:            true,    // sacudir el teléfono dispara un RANDOM
   capaNiebla:         true,    // niebla atmosférica (INSIDE)
   capaGrade:          true,    // grade frío/apagado (INSIDE)
